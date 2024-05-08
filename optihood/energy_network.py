@@ -22,14 +22,22 @@ class EnergyNetworkClass(solph.EnergySystem):
         self._clusterDate = {}
         if clusters:
             self._numberOfDays = len(clusters)
-            lastDay = datetime(timestamp.year[0], 1, 1) + timedelta(self._numberOfDays - 1)
+            lastDay = datetime(timestamp.year[0], 
+                               timestamp.month[0],
+                               timestamp.day[0]) + timedelta(self._numberOfDays - 1)
             lastDay = lastDay.strftime('%Y-%m-%d')
             i = 1
             for day in clusters:
-                d_clusterIndex = datetime(timestamp.year[0], 1, 1) + timedelta(i - 1)
+                d_clusterIndex = datetime(timestamp.year[0], 
+                                   timestamp.month[0],
+                                   timestamp.day[0]) + timedelta(i - 1)
                 self._clusterDate[day] = d_clusterIndex.strftime('%Y-%m-%d')
                 i += 1
-            timestamp = pd.date_range("2021-01-01 00:00:00", f"{lastDay} 23:00:00", freq=timestamp.freq)
+            timestamp = pd.date_range(datetime(self._timeIndexReal.year[0], 
+                                                  self._timeIndexReal.month[0], 
+                                                  self._timeIndexReal.day[0]), 
+                                      f"{lastDay} 23:00:00", freq=timestamp.freq)
+        
         self._nodesList = []
         self._storageContentSH = {}
         self.__inputs = {}                          # dictionary of list of inputs indexed by the building label
@@ -283,9 +291,31 @@ class EnergyNetworkClass(solph.EnergySystem):
             #if any(data["transformers"]["label"] == "HP") or any(data["transformers"]["label"] == "GWHP"):   #add electricity rod if HP or GSHP is present in the available technology pool
             #    b.addElectricRodBackup(opt)
             b.addStorage(data["storages"][data["storages"]["building"] == i], data["stratified_storage"], opt, mergeLinkBuses, self._dispatchMode)
-            b.addSolar(data["solar"][(data["solar"]["building"] == i) & (data["solar"]["label"] == "solarCollector")], data["weather_data"], opt, mergeLinkBuses, self._dispatchMode)
-            b.addPV(data["solar"][(data["solar"]["building"] == i) & (data["solar"]["label"] == "pv")], data["weather_data"], opt, self._dispatchMode)
-            b.addPVT(data["solar"][(data["solar"]["building"] == i) & (data["solar"]["label"] == "pvt")], data["weather_data"], opt, mergeLinkBuses, self._dispatchMode)
+            
+            pv_counter = 0
+            pvt_counter = 0
+            st_counter = 0
+            for key in data["solar"]['label']:                
+                if 'pv_' in key:
+                    pv_counter+=1
+                
+                if 'pvt_' in key:
+                    pvt_counter+=1
+                if 'solarCollector_' in key:
+                    st_counter+=1
+            data_view=data['solar'].loc[data['solar']['building']==i,:]        
+            for k in range(1,pv_counter+1):
+                data_pv=data_view.loc[data_view.label=='pv_' + str(k),:]
+                b.addPV(data_pv, data["weather_data"], opt, self._dispatchMode)            
+            for k in range(1,pvt_counter+1):
+                data_pvt=data_view.loc[data_view.label=='pvt_' + str(k),:]
+                b.addPVT(data_pvt, data["weather_data"], opt, mergeLinkBuses, self._dispatchMode)
+            for k in range(1,st_counter+1):
+                data_st=data_view.loc[data_view.label=='solarCollector_' + str(k),:]
+                b.addSolar(data_st, data["weather_data"], opt, mergeLinkBuses, self._dispatchMode)                
+            
+  
+            
             self._nodesList.extend(b.getNodesList())
             self.__inputs[buildingLabel] = b.getInputs()
             self.__technologies[buildingLabel] = b.getTechnologies()
@@ -306,20 +336,24 @@ class EnergyNetworkClass(solph.EnergySystem):
             print(oobj + ":", n.label)
         print("*********************************************************")
 
-    def optimize(self, numberOfBuildings, solver, envImpactlimit=1000000, clusterSize={},
+    def optimize(self, numberOfBuildings, solver, envImpactlimit=1000000, 
+                 clusterSize={},
+                 clusterBook={},
                  options=None,   # solver options
                  optConstraints=None, #optional constraints (implemented for the moment are "roof area"
                  mergeLinkBuses=False):
 
         if options is None:
-            options = {"gurobi": {"MIPGap": 0.01}}
+            options = {"gurobi": {"MIPGap": 0.001},
+                       "cbc":{'threads' : 4},
+                       "glpk":{}}
 
         optimizationModel = solph.Model(self)
         logging.info("Optimization model built successfully")
 
         # add constraint to limit the environmental impacts
         optimizationModel, flows, transformerFlowCapacityDict, storageCapacityDict = environmentalImpactlimit(
-            optimizationModel, keyword1="env_per_flow", keyword2="env_per_capa", limit=envImpactlimit)
+            optimizationModel, keyword1="env_per_flow", keyword2="env_per_capa", limit=envImpactlimit,clusterSZ=clusterSize)
 
         # optional constraints (available: 'roof area')
         if optConstraints:
@@ -368,7 +402,7 @@ class EnergyNetworkClass(solph.EnergySystem):
         capacitiesTransformersNetwork, capacitiesStoragesNetwork = self._calculateInvestedCapacities(optimizationModel, transformerFlowCapacityDict, storageCapacityDict)
 
         if clusterSize:
-            self._postprocessingClusters(clusterSize)
+            self._postprocessingClusters(clusterSize,clusterBook)
 
         # calculate results (CAPEX, OPEX, FeedIn Costs, environmental impacts etc...) for each building
         self._calculateResultsPerBuilding(mergeLinkBuses)
@@ -507,12 +541,25 @@ class EnergyNetworkClass(solph.EnergySystem):
                 capacitiesStorages[storage] = capacitiesStorages[storage] / self.__Ldhw
         return capacitiesStorages
 
-    def _postprocessingClusters(self, clusterSize):
+    def _postprocessingClusters(self, clusterSize,clusterBook):
+        logging.info("Cluster post-processing started")
+
         flows = [x for x in self._optimizationResults.keys() if x[1] is not None]
         for flow in flows:
             extrapolated_results = None
-            for day in clusterSize:
-                temp = pd.concat([self._optimizationResults[flow]['sequences'][self._clusterDate[day]]] * clusterSize[day])
+            dailyIndex = pd.period_range(datetime(self._timeIndexReal.year[0], 
+                                                  self._timeIndexReal.month[0], 
+                                                  self._timeIndexReal.day[0]), 
+                                         freq='D', periods=(self._timeIndexReal[-1]-
+                                                            self._timeIndexReal[0]+
+                                                            timedelta(seconds=3600)).days)
+            #for each day of the year, locate the corresponding cluster day &
+            # create vector of the year with only cluster days distributed 
+            #based on the date affinity to a particular cluster day.
+            for i in range(len(dailyIndex)):
+                temp = self._optimizationResults[flow]['sequences'].loc[
+                    self._clusterDate[
+                        list(clusterSize.keys())[clusterBook.iloc[i,0]-1]],:]
                 if extrapolated_results is not None:
                     extrapolated_results = pd.concat([extrapolated_results, temp])
                 else:
@@ -520,7 +567,9 @@ class EnergyNetworkClass(solph.EnergySystem):
             extrapolated_results.index = self._timeIndexReal
             extrapolated_results.columns = ['flow']
             self._optimizationResults[flow]['sequences'] = extrapolated_results
-
+        logging.info("Cluster post-processing finished")
+        return None
+    
     def _calculateResultsPerBuilding(self, mergeLinkBuses):
         for b in self.__buildings:
             buildingLabel = b.getBuildingLabel()
@@ -687,7 +736,7 @@ class EnergyNetworkClass(solph.EnergySystem):
     def printInvestedCapacities(self, capacitiesInvestedTransformers, capacitiesInvestedStorages):
         for b in range(len(self.__buildings)):
             buildingLabel = "Building" + str(b + 1)
-            print("************** Optimized Capacities for {} **************".format(buildingLabel))
+            #print("************** Optimized Capacities for {} **************".format(buildingLabel))
             if ("HP__" + buildingLabel, "shSourceBus__" + buildingLabel) in capacitiesInvestedTransformers:
                 investSH = capacitiesInvestedTransformers[("HP__" + buildingLabel, "shSourceBus__" + buildingLabel)]
                 print("Invested in {:.1f} kW HP.".format(investSH))
@@ -713,15 +762,30 @@ class EnergyNetworkClass(solph.EnergySystem):
             if ("GasBoiler__" + buildingLabel, "shSourceBus__" + buildingLabel) in capacitiesInvestedTransformers:
                 investSH = capacitiesInvestedTransformers["GasBoiler__" + buildingLabel, "shSourceBus__" + buildingLabel]
                 print("Invested in {:.1f} kW GasBoiler.".format(investSH))
-            if ("heat_solarCollector__" + buildingLabel, "solarConnectBus__" + buildingLabel) in capacitiesInvestedTransformers:
-                invest = capacitiesInvestedTransformers[("heat_solarCollector__" + buildingLabel, "solarConnectBus__" + buildingLabel)]
-                print("Invested in {:.1f} m² SolarCollector.".format(invest))
-            if ("pv__" + buildingLabel, "electricityProdBus__" + buildingLabel) in capacitiesInvestedTransformers:
-                invest = capacitiesInvestedTransformers[("pv__" + buildingLabel, "electricityProdBus__" + buildingLabel)]
-                print("Invested in {:.1f} kWp  PV.".format(invest))
-            if ("heatSource_SHpvt__" + buildingLabel, "pvtConnectBusSH__" + buildingLabel) in capacitiesInvestedTransformers:
-                invest = capacitiesInvestedTransformers[("heatSource_SHpvt__" + buildingLabel, "pvtConnectBusSH__" + buildingLabel)]
-                print("Invested in {:.1f} m² PVT collector.".format(invest))
+            if ("heat_solarCollector_1__" + buildingLabel, "solarConnectBus__" + buildingLabel) in capacitiesInvestedTransformers:
+                st_counter=0
+                for key, value in capacitiesInvestedTransformers.items():   # iter on both keys and values                    
+                    if key.startswith('heat_solarCollector_'):
+                        st_counter+=1
+                for n in range(st_counter):
+                    invest = capacitiesInvestedTransformers[("heat_solarCollector_" + str(n) + "__" + buildingLabel, "solarConnectBus__" + buildingLabel)]
+                    print("Invested in {:.1f} m² SolarCollector_" + str(n) + ".".format(invest))
+            if ("pv_1__" + buildingLabel, "electricityProdBus__" + buildingLabel) in capacitiesInvestedTransformers:
+                pv_counter=0
+                for key, value in capacitiesInvestedTransformers.items():   # iter on both keys and values                    
+                    if key.startswith('pv_'):
+                        pv_counter+=1
+                for n in range(pv_counter):
+                    invest = capacitiesInvestedTransformers[("pv_" + str(n) + "__" + buildingLabel, "electricityProdBus__" + buildingLabel)]
+                    print("Invested in {:.1f} kWp  PV_" + str(n) + ".".format(invest))
+            if ("heatSource_pvt_1__" + buildingLabel, "pvtConnectBus__" + buildingLabel) in capacitiesInvestedTransformers:
+                pvt_counter=0
+                for key, value in capacitiesInvestedTransformers.items():   # iter on both keys and values                    
+                    if 'pvt_' in key[0]:
+                        pvt_counter+=1
+                for n in range(pvt_counter):
+                    invest = capacitiesInvestedTransformers[("heatSource_pvt_" + str(n) + "__" + buildingLabel, "pvtConnectBus__" + buildingLabel)]
+                    print("Invested in {:.1f} m² kWth  PVT_" + str(n) + ".".format(invest))
             if "electricalStorage__" + buildingLabel in capacitiesInvestedStorages:
                 invest = capacitiesInvestedStorages["electricalStorage__" + buildingLabel]
                 print("Invested in {:.1f} kWh Electrical Storage.".format(invest))
@@ -766,6 +830,8 @@ class EnergyNetworkClass(solph.EnergySystem):
     def exportToExcel(self, file_name, mergeLinkBuses=False):
         for i in range(1, self.__noOfBuildings+1):
             self.calcStateofCharge("shStorage", f"Building{i}")
+        logging.info("Export to excel started")
+        
         with pd.ExcelWriter(file_name) as writer:
             busLabelList = []
             for i in self.nodes:
@@ -824,6 +890,8 @@ class EnergyNetworkClass(solph.EnergySystem):
 
                 capacitiesTransformersBuilding = pd.DataFrame.from_dict(capacitiesTransformers, orient='index')
                 capacitiesTransformersBuilding.to_excel(writer, sheet_name="capTransformers__" + buildingLabel)
+        logging.info("Export to excel finished")
+        return None
 
 class EnergyNetworkIndiv(EnergyNetworkClass):
     def createScenarioFile(self, configFilePath, excelFilePath, building, numberOfBuildings=1):

@@ -122,7 +122,7 @@ class Building:
                                        data_timeseries['gls'],
                                        data_timeseries['str.diffus'],
                                        data_timeseries['tre200h0'], float(s["capacity_min"]), float(s["capacity_max"]),
-                                       epc, base, env_capa, env_flow, varc, dispatchMode))
+                                       epc, base, env_capa, env_flow, varc, dispatchMode, float(s["space"])))
 
             self.__envParam[s["label"] + '__' + self.__buildingLabel] = envParam
 
@@ -171,8 +171,8 @@ class Building:
                                                    s["zenith_angle"], float(s["azimuth"]),
                                                    float(s["eta_0"]), float(s["a_1"]), float(s["a_2"]), float(s["temp_collector_inlet"]),
                                                    float(s["delta_temp_n"]), data_timeseries['gls'], data_timeseries['str.diffus'],
-                                                    data_timeseries['tre200h0'], float(s["capacity_min"]), float(s["capacity_max"]),
-                                                   epc, base, env_capa, env_flow, varc, dispatchMode)
+                                                    data_timeseries['tre200h0'], float(s["capacity_min"]), float(s["capacity_max"]),                                                    
+                                                   epc, base, env_capa, env_flow, varc, dispatchMode,float(s["space"]))
             self.__nodesList.append(collector.getSolar("source"))
             self.__nodesList.append(collector.getSolar("transformer"))
             self.__nodesList.append(collector.getSolar("sink"))
@@ -193,11 +193,8 @@ class Building:
                 else:
                     inputBusLabel = s["from"] + '__' + self.__buildingLabel
 
-                outputBuses = [self.__busDict[s["to"].split(",")[0] + '__' + self.__buildingLabel],
-                               self.__busDict[s["to"].split(",")[1] + '__' + self.__buildingLabel],
-                               self.__busDict[s["to"].split(",")[2] + '__' + self.__buildingLabel]]
-                connectBuses = [self.__busDict[s["connect"].split(",")[0] + '__' + self.__buildingLabel],
-                               self.__busDict[s["connect"].split(",")[1] + '__' + self.__buildingLabel]]
+                outputBusLabels = [self.__busDict[s["to"].split(",")[0] + '__' + self.__buildingLabel], self.__busDict[s["to"].split(",")[1] + '__' + self.__buildingLabel]]
+
                 if opt == "costs":
                     epc = self._calculateInvest(s)[0]
                     base = self._calculateInvest(s)[1]
@@ -224,32 +221,25 @@ class Building:
                     s["roof_area"] = float(s["roof_area"])
                 pvtcollector = PVT(s["label"], self.__buildingLabel,
                                                        self.__busDict[inputBusLabel],
-                                                       outputBuses,
-                                                       connectBuses,
+                                                       outputBusLabels,
+                                                       self.__busDict[s["connect"]+ '__' + self.__buildingLabel],
                                                        float(s["electrical_consumption"]), float(s["peripheral_losses"]), float(s["latitude"]),
                                                        float(s["longitude"]), float(s["tilt"]), s["roof_area"],
                                                        float(s["zenith_angle"]), float(s["azimuth"]),
                                                        float(s["eta_0"]), float(s["a_1"]), float(s["a_2"]), float(s["temp_collector_inlet"]),data_timeseries['tre200h0'],
                                                        float(s["delta_temp_n"]), data_timeseries['gls'], data_timeseries['str.diffus'], float(s["capacity_min"]), float(s["capacity_max"]),
                                                        epc, base, env_capa, env_flow, varc, dispatchMode,
-                                                        float(s["pv_efficiency"]))
-                nodes = [pvtcollector.getPVT("el_source")]
-                for t in ["heat_source", "heat_transformer", "excess_heat_sink"]:
-                    nodes.append(pvtcollector.getPVT(t))
-                for x in nodes:
-                    self.__nodesList.append(x)
+                                                        float(s["efficiency"]),0.85,float(s["space"]))
+                self.__nodesList.append(pvtcollector.getPVT("el_source"))
+                self.__nodesList.append(pvtcollector.getPVT("heat_source"))
+                self.__nodesList.append(pvtcollector.getPVT("heat_transformer"))
+                self.__nodesList.append(pvtcollector.getPVT("excess_heat_sink"))
 
-
-                self.__envParam['heatSourceSH_' + s['label'] + '__' + self.__buildingLabel] = envParam
-                self.__envParam['heatSourceDHW_' + s['label'] + '__' + self.__buildingLabel] = [env_flow, 0, 0]
-                self.__costParam['heatSourceSH_' + s['label'] + '__' + self.__buildingLabel] = [self._calculateInvest(s)[0],
+                self.__envParam['heatSource_' + s['label'] + '__' + self.__buildingLabel] = envParam
+                self.__costParam['heatSource_' + s['label'] + '__' + self.__buildingLabel] = [self._calculateInvest(s)[0],
                                                                                             self._calculateInvest(s)[1]]
-                self.__costParam['heatSourceDHW_' + s['label'] + '__' + self.__buildingLabel] = [0, 0]
-
                 self.__technologies.append(
-                    [outputBuses[0], s["label"] + 'SH__' + self.__buildingLabel])
-                self.__technologies.append(
-                    [outputBuses[1], s["label"] + 'DHW__' + self.__buildingLabel])
+                    [s["to"] + '__' + self.__buildingLabel, s["label"] + '__' + self.__buildingLabel])
 
     def addGridSeparation(self, dataGridSeparation, mergeLinkBuses):
         if not dataGridSeparation.empty:

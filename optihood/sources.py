@@ -7,7 +7,7 @@ import pvlib
 class PV(solph.Source):
     def __init__(self, label, buildingLabel, outputs, peripheral_losses, latitude, longitude,
                  pv_tilt, pv_efficiency, roof_area, zenith_angle, pv_azimuth, irradiance_global, irradiance_diffuse, temp_amb_pv, capacityMin,
-                 capacityMax, epc, base, env_capa, env_flow, varc, dispatchMode):
+                 capacityMax, epc, base, env_capa, env_flow, varc, dispatchMode,space):
         # Creation of a df with 3 columns
         data = self.computePvSolarPosition(irradiance_diffuse, irradiance_global, latitude, longitude, pv_azimuth,
                                            pv_tilt, temp_amb_pv)
@@ -15,7 +15,10 @@ class PV(solph.Source):
         self.pv_electricity = np.minimum(self.pv_precalc(temp_amb_pv, data['pv_ira']/1000), capacityMax + base)
 
         if not (np.isnan(roof_area) or np.isnan(zenith_angle) or np.isnan(pv_efficiency)):
-            self.surface_used = self._calculateArea(zenith_angle, pv_tilt, pv_azimuth, pv_efficiency)
+            # self.surface_used = self._calculateArea(zenith_angle, pv_tilt, pv_azimuth, pv_efficiency)
+             # 1kW divided by efficiency = area of panels for 1kW
+             # 1kW panel area divided by cover ratio gives roof area occupied 
+            self.surface_used=1/pv_efficiency/space
         else:
             self.surface_used = np.nan
         if dispatchMode:

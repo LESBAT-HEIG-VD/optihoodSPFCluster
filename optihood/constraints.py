@@ -61,7 +61,7 @@ def connectInvestmentRule(om):
     return om
 
 
-def environmentalImpactlimit(om, keyword1, keyword2, limit=None):
+def environmentalImpactlimit(om, keyword1, keyword2, limit=None,clusterSZ={}):
     """
     Based on: oemof.solph.constraints.emission_limit
     Function to limit the environmental impacts during the multi-objective optimization
@@ -85,7 +85,16 @@ def environmentalImpactlimit(om, keyword1, keyword2, limit=None):
             storageCapacityDict[x] = om.GenericInvestmentStorageBlock.invest[x]
 
     envImpact = "totalEnvironmentalImpact"
-
+    cluster_vector=[]
+    if clusterSZ!={}:        
+        for d in clusterSZ:
+            for i in range(24):
+                cluster_vector.append({}) 
+                cluster_vector[-1]=clusterSZ[d]
+    else:
+        for t in om.TIMESTEPS:
+            cluster_vector.append({}) 
+            cluster_vector[-1]=1
     setattr(
         om,
         envImpact,
@@ -95,6 +104,7 @@ def environmentalImpactlimit(om, keyword1, keyword2, limit=None):
                 om.flow[inflow, outflow, t]
                 * om.timeincrement[t]
                 * sequence(getattr(flows[inflow, outflow], keyword1))[t]
+                * cluster_vector[t]
                 for (inflow, outflow) in flows
                 for t in om.TIMESTEPS
             )
@@ -221,32 +231,21 @@ def totalPVCapacityConstraint(om, numBuildings):
 
 def PVTElectricalThermalCapacityConstraint(om, numBuildings):
     pvtElOutFlows = [(i, o) for (i, o) in om.flows if ("elSource_pvt" in i.label)]
-    pvtShOutFlows = [(i, o) for (i, o) in om.flows if ("heatSource_SHpvt" in i.label)]
-    pvtDhwOutFlows = [(i, o) for (i, o) in om.flows if ("heatSource_DHWpvt" in i.label)]
+    pvtThOutFlows = [(i, o) for (i, o) in om.flows if ("heatSource_pvt" in i.label)]
     for b in range(1, numBuildings + 1):
         elCapacity = [om.InvestmentFlow.invest[i, o] for (i, o) in pvtElOutFlows if ((f'__Building{b}') in o.label)]
-        shCapacity = [om.InvestmentFlow.invest[i, o] for (i, o) in pvtShOutFlows if ((f'__Building{b}') in o.label)]
-        dhwCapacity = [om.InvestmentFlow.invest[i, o] for (i, o) in pvtDhwOutFlows if ((f'__Building{b}') in o.label)]
+        thCapacity = [om.InvestmentFlow.invest[i, o] for (i, o) in pvtThOutFlows if ((f'__Building{b}') in o.label)]
         areaUnitCapEl = [getattr(om.flows[i, o].investment, 'space_el') for (i, o) in pvtElOutFlows if ((f'__Building{b}') in o.label)]
-        areaUnitCapSh = [getattr(om.flows[i, o].investment, 'space') for (i, o) in pvtShOutFlows if ((f'__Building{b}') in o.label)]
-        if elCapacity or shCapacity:
+        areaUnitCapTh = [getattr(om.flows[i, o].investment, 'space') for (i, o) in pvtThOutFlows if ((f'__Building{b}') in o.label)]
+        if elCapacity or thCapacity:
             elCapacity = elCapacity[0]
-            shCapacity = shCapacity[0]
-            dhwCapacity = dhwCapacity[0]
+            thCapacity = thCapacity[0]
             areaUnitCapEl = areaUnitCapEl[0]
-            areaUnitCapSh = areaUnitCapSh[0]
-            expr = (elCapacity*areaUnitCapEl == shCapacity*areaUnitCapSh)
+            areaUnitCapTh = areaUnitCapTh[0]
+            expr = (elCapacity*areaUnitCapEl == thCapacity*areaUnitCapTh)
             setattr(
                 om,
-                "PVTSizeConstrElTh_B"+str(b),
+                "PVTSizeConstr_B"+str(b),
                 pyo.Constraint(expr=expr),
             )
-            expr = (dhwCapacity == shCapacity)
-            setattr(
-                om,
-                "PVTSizeConstrDhwSh_B" + str(b),
-                pyo.Constraint(expr=expr),
-            )
-
-
     return om
