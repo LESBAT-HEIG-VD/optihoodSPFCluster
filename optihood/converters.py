@@ -57,7 +57,7 @@ class SolarCollector(solph.Transformer):
         )
 
         self.__collector_excess_heat = solph.Sink(
-            label='excess_solarheat' + "__" + buildingLabel, inputs={connector: solph.Flow()}
+            label='excess_' + label + "__" + buildingLabel, inputs={connector: solph.Flow()}
         )
 
         self.__collector_transformer = solph.Transformer(

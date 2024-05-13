@@ -765,27 +765,27 @@ class EnergyNetworkClass(solph.EnergySystem):
             if ("heat_solarCollector_1__" + buildingLabel, "solarConnectBus__" + buildingLabel) in capacitiesInvestedTransformers:
                 st_counter=0
                 for key, value in capacitiesInvestedTransformers.items():   # iter on both keys and values                    
-                    if key.startswith('heat_solarCollector_'):
+                    if key[0].startswith('heat_solarCollector_'):
                         st_counter+=1
-                for n in range(st_counter):
+                for n in range(1,st_counter+1):
                     invest = capacitiesInvestedTransformers[("heat_solarCollector_" + str(n) + "__" + buildingLabel, "solarConnectBus__" + buildingLabel)]
-                    print("Invested in {:.1f} m² SolarCollector_" + str(n) + ".".format(invest))
+                    print("Invested in {:.1f} m² of SolarCollector_{}".format(invest,str(n)))
             if ("pv_1__" + buildingLabel, "electricityProdBus__" + buildingLabel) in capacitiesInvestedTransformers:
                 pv_counter=0
                 for key, value in capacitiesInvestedTransformers.items():   # iter on both keys and values                    
-                    if key.startswith('pv_'):
+                    if key[0].startswith('pv_'):
                         pv_counter+=1
-                for n in range(pv_counter):
+                for n in range(1,1+pv_counter):
                     invest = capacitiesInvestedTransformers[("pv_" + str(n) + "__" + buildingLabel, "electricityProdBus__" + buildingLabel)]
-                    print("Invested in {:.1f} kWp  PV_" + str(n) + ".".format(invest))
+                    print("Invested in {:.1f} kWp of PV_{}.".format(invest,str(n)))
             if ("heatSource_pvt_1__" + buildingLabel, "pvtConnectBus__" + buildingLabel) in capacitiesInvestedTransformers:
                 pvt_counter=0
                 for key, value in capacitiesInvestedTransformers.items():   # iter on both keys and values                    
-                    if 'pvt_' in key[0]:
+                    if key[0].startswith('heatSource_pvt_'):
                         pvt_counter+=1
-                for n in range(pvt_counter):
+                for n in range(1,1+pvt_counter):
                     invest = capacitiesInvestedTransformers[("heatSource_pvt_" + str(n) + "__" + buildingLabel, "pvtConnectBus__" + buildingLabel)]
-                    print("Invested in {:.1f} m² kWth  PVT_" + str(n) + ".".format(invest))
+                    print("Invested in {:.1f} m² of  PVT_{}".format(invest,str(n)))
             if "electricalStorage__" + buildingLabel in capacitiesInvestedStorages:
                 invest = capacitiesInvestedStorages["electricalStorage__" + buildingLabel]
                 print("Invested in {:.1f} kWh Electrical Storage.".format(invest))
