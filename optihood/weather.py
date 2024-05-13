@@ -123,7 +123,7 @@ class weather:
         self.W_S_D=-23.45
         self.W_S_A=np.abs(self.lat+self.W_S_D)
         # self.set_solar_scenarios()
-        
+        self.load_agg_demand()
         
         worksheet = workbook.sheet_by_name('solar_technology')
         tecno_df_columns=worksheet.row_values(0,start_colx=0,end_colx=None)
@@ -150,6 +150,26 @@ class weather:
         #                                    worksheet.row_values(0, start_colx=0, end_colx=None).index('a_1')).value)
         # self.PVT_a2= float(worksheet.cell(worksheet.col_values(0, start_rowx=0, end_rowx=None).index('pvt'), 
         #                                    worksheet.row_values(0, start_colx=0, end_colx=None).index('a_2')).value)
+        return None
+    
+    def load_agg_demand(self):
+        self.agg_demand=pd.DataFrame()
+        
+        for bld in self.df_hood.building:
+            if bld==self.df_hood.building[0]:
+                self.agg_demand=self.load_bld_demand(bld)
+                self.year_index=self.agg_demand.timestamp.copy()
+            else:
+                try:
+                    source=self.demand_f_adr + r"\Building2"+str(int(bld))+".csv"
+                    demand=pd.read_csv(source,sep=";")
+                    self.agg_demand=self.agg_demand+demand
+                except:
+                    source=self.demand_f_adr + r"\Building"+str(int(bld))+".csv"
+                    demand=pd.read_csv(source,sep=";")
+                    for col in self.agg_demand.columns:
+                        self.agg_demand[col]=self.agg_demand[col].add(demand[col])
+        self.agg_demand.timestamp=self.year_index
         return None
     
     def load_bld_demand(self,bld_name):
@@ -783,9 +803,17 @@ class weather:
                                            'ground_temp':'mean',
                                            'pressure':'mean'})
         self.meteo_daily['week_end'] = [1000 if d.weekday() >= 5 else 0 for d in self.meteo_daily.index]
+        self.agg_demand.set_index('timestamp',drop=True,inplace=True)
+        self.agg_demand.index=pd.to_datetime(self.agg_demand.index).tz_localize('UTC')
+        self.agg_demand_daily=self.agg_demand.resample('D').sum()
+        self.cluster_DB=pd.merge(self.meteo_daily,self.agg_demand_daily,how='inner',left_index=True, right_index=True)
         if clustering_vars==[]:
-            clustering_vars= ['tre200h0', 'gls', 'str.diffus', 'ground_temp', 'pressure','week_end'] # columns to use for clustering
-        clustering_input = self.meteo_daily.loc[:,clustering_vars]
+            """
+            we cluster on meteo variables and on aggregated demand
+            """
+            clustering_vars= ['tre200h0', 'gls', 'str.diffus', 'ground_temp', 'pressure','week_end',
+                              'electricityDemand','spaceHeatingDemand','domesticHotWaterDemand'] # columns to use for clustering
+        clustering_input = self.cluster_DB.loc[:,clustering_vars]
         
         """Normalize input data and perform clustering
         """
