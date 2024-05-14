@@ -370,102 +370,125 @@ class weather:
         self.solar_cases_select=pd.DataFrame(columns=self.solar_cases.columns)
         for bld in self.df_hood.building:
             for lay in self.layout_list:
-                self.solar_cases_select=pd.concat([self.solar_cases_select,self.solar_cases.loc[
-                    self.solar_cases.bld_name==bld,:].loc[
-                        self.solar_cases.Techno=='pv',:].loc[
+                for tec in self.tecno_list:
+                    select=self.solar_cases.loc[
+                        self.solar_cases.bld_name==bld,:].loc[
                             self.solar_cases.cll_layout==lay,:].loc[
-                            self.solar_cases['ICPe']==self.solar_cases.loc[
-                                self.solar_cases.bld_name==bld,:].loc[
-                                    self.solar_cases.Techno=='pv',:].loc[
-                                        self.solar_cases.cll_layout==lay,'ICPe'].max(),:]],axis=0)
+                            self.solar_cases.Techno==tec,:]
+                                
+                    if tec=='pv' or tec=='pvt':
+                        self.solar_cases_select=self.solar_cases_select.append(
+                            select.loc[select['ICPe'].idxmax(),:])
+                    else:
+                        self.solar_cases_select=self.solar_cases_select.append(
+                            select.loc[select['ICPth'].idxmax(),:])
+                # self.solar_cases_select=pd.concat([self.solar_cases_select,self.solar_cases.loc[
+                #     self.solar_cases.bld_name==bld,:].loc[
+                #         self.solar_cases.Techno=='pv',:].loc[
+                #             self.solar_cases.cll_layout==lay,:].loc[
+                #             self.solar_cases['ICPe']==self.solar_cases.loc[
+                #                 self.solar_cases.bld_name==bld,:].loc[
+                #                     self.solar_cases.Techno=='pv',:].loc[
+                #                         self.solar_cases.cll_layout==lay,'ICPe'].max(),:]],axis=0)
                                     
-                self.solar_cases_select=pd.concat([self.solar_cases_select,self.solar_cases.loc[
-                    self.solar_cases.bld_name==bld,:].loc[
-                        self.solar_cases.Techno=='pv',:].loc[
-                            self.solar_cases.cll_layout==lay,:].loc[
-                            self.solar_cases['el cover ratio']==self.solar_cases.loc[
-                                self.solar_cases.bld_name==bld,:].loc[
-                                    self.solar_cases.Techno=='pv',:].loc[
-                                        self.solar_cases.cll_layout==lay,'el cover ratio'].max(),:]],axis=0)                        
+                # self.solar_cases_select=pd.concat([self.solar_cases_select,self.solar_cases.loc[
+                #     self.solar_cases.bld_name==bld,:].loc[
+                #         self.solar_cases.Techno=='pv',:].loc[
+                #             self.solar_cases.cll_layout==lay,:].loc[
+                #             self.solar_cases['el cover ratio']==self.solar_cases.loc[
+                #                 self.solar_cases.bld_name==bld,:].loc[
+                #                     self.solar_cases.Techno=='pv',:].loc[
+                #                         self.solar_cases.cll_layout==lay,'el cover ratio'].max(),:]],axis=0)                        
             
                             
-                self.solar_cases_select=pd.concat([self.solar_cases_select,self.solar_cases.loc[
-                    self.solar_cases.bld_name==bld,:].loc[
-                        self.solar_cases.Techno=='solarCollector',:].loc[
-                            self.solar_cases.cll_layout==lay,:].loc[
-                            self.solar_cases['ICPth']==self.solar_cases.loc[
-                                self.solar_cases.bld_name==bld,:].loc[
-                                    self.solar_cases.Techno=='solarCollector',:].loc[
-                                        self.solar_cases.cll_layout==lay,'ICPth'].max(),:]],axis=0)
+                # self.solar_cases_select=pd.concat([self.solar_cases_select,self.solar_cases.loc[
+                #     self.solar_cases.bld_name==bld,:].loc[
+                #         self.solar_cases.Techno=='solarCollector',:].loc[
+                #             self.solar_cases.cll_layout==lay,:].loc[
+                #             self.solar_cases['ICPth']==self.solar_cases.loc[
+                #                 self.solar_cases.bld_name==bld,:].loc[
+                #                     self.solar_cases.Techno=='solarCollector',:].loc[
+                #                         self.solar_cases.cll_layout==lay,'ICPth'].max(),:]],axis=0)
                                     
-                self.solar_cases_select=pd.concat([self.solar_cases_select,self.solar_cases.loc[
-                    self.solar_cases.bld_name==bld,:].loc[
-                        self.solar_cases.Techno=='solarCollector',:].loc[
-                            self.solar_cases.cll_layout==lay,:].loc[
-                            self.solar_cases['th cover ratio']==self.solar_cases.loc[
-                                self.solar_cases.bld_name==bld,:].loc[
-                                    self.solar_cases.Techno=='solarCollector',:].loc[
-                                        self.solar_cases.cll_layout==lay,'th cover ratio'].max(),:]],axis=0)                           
+                # self.solar_cases_select=pd.concat([self.solar_cases_select,self.solar_cases.loc[
+                #     self.solar_cases.bld_name==bld,:].loc[
+                #         self.solar_cases.Techno=='solarCollector',:].loc[
+                #             self.solar_cases.cll_layout==lay,:].loc[
+                #             self.solar_cases['th cover ratio']==self.solar_cases.loc[
+                #                 self.solar_cases.bld_name==bld,:].loc[
+                #                     self.solar_cases.Techno=='solarCollector',:].loc[
+                #                         self.solar_cases.cll_layout==lay,'th cover ratio'].max(),:]],axis=0)                           
                 
-                self.solar_cases_select=pd.concat([self.solar_cases_select,self.solar_cases.loc[
-                    self.solar_cases.bld_name==bld,:].loc[
-                        self.solar_cases.Techno=='pvt',:].loc[
-                            self.solar_cases.cll_layout==lay,:].loc[
-                            self.solar_cases['ICPe']==self.solar_cases.loc[
-                                self.solar_cases.bld_name==bld,:].loc[
-                                    self.solar_cases.Techno=='pvt',:].loc[
-                                        self.solar_cases.cll_layout==lay,'ICPe'].max(),:]],axis=0)
+                # self.solar_cases_select=pd.concat([self.solar_cases_select,self.solar_cases.loc[
+                #     self.solar_cases.bld_name==bld,:].loc[
+                #         self.solar_cases.Techno=='pvt',:].loc[
+                #             self.solar_cases.cll_layout==lay,:].loc[
+                #             self.solar_cases['ICPe']==self.solar_cases.loc[
+                #                 self.solar_cases.bld_name==bld,:].loc[
+                #                     self.solar_cases.Techno=='pvt',:].loc[
+                #                         self.solar_cases.cll_layout==lay,'ICPe'].max(),:]],axis=0)
                                     
-                self.solar_cases_select=pd.concat([self.solar_cases_select,self.solar_cases.loc[
-                    self.solar_cases.bld_name==bld,:].loc[
-                        self.solar_cases.Techno=='pvt',:].loc[
-                            self.solar_cases.cll_layout==lay,:].loc[
-                            self.solar_cases['th cover ratio']==self.solar_cases.loc[
-                                self.solar_cases.bld_name==bld,:].loc[
-                                    self.solar_cases.Techno=='pvt',:].loc[
-                                        self.solar_cases.cll_layout==lay,'th cover ratio'].max(),:]],axis=0)
+                # self.solar_cases_select=pd.concat([self.solar_cases_select,self.solar_cases.loc[
+                #     self.solar_cases.bld_name==bld,:].loc[
+                #         self.solar_cases.Techno=='pvt',:].loc[
+                #             self.solar_cases.cll_layout==lay,:].loc[
+                #             self.solar_cases['th cover ratio']==self.solar_cases.loc[
+                #                 self.solar_cases.bld_name==bld,:].loc[
+                #                     self.solar_cases.Techno=='pvt',:].loc[
+                #                         self.solar_cases.cll_layout==lay,'th cover ratio'].max(),:]],axis=0)
         
                                                 
             pv_counter=0
             pvt_counter=0
             st_counter=0
-            for i in range (1,self.solar_cases_select.index.size):
+            for i in range (self.solar_cases_select.index.size):
                 if self.solar_cases_select.bld_name.iloc[i]==bld:
                     if self.solar_cases_select.Techno.iloc[i]=='pvt':
                         pvt_counter=pvt_counter+1
-                        self.solar_cases_select.Techno.iloc[i]=='pvt'+str(pvt_counter)
+                        self.solar_cases_select.loc[
+                            self.solar_cases_select.index[i],'Techno']='pvt_'+str(pvt_counter)
                     if self.solar_cases_select.Techno.iloc[i]=='pv':
                         pv_counter=pv_counter+1
-                        self.solar_cases_select.Techno.iloc[i]=='pv'+str(pv_counter)
-                    if self.solar_cases_select.Techno.iloc[i]=='st':
+                        self.solar_cases_select.loc[
+                            self.solar_cases_select.index[i],'Techno']='pv_'+str(pv_counter)
+                    if self.solar_cases_select.Techno.iloc[i]=='solarCollector':
                         st_counter=st_counter+1
-                        self.solar_cases_select.Techno.iloc[i]=='st'+str(st_counter)
+                        self.solar_cases_select.loc[
+                            self.solar_cases_select.index[i],'Techno']='solarCollector_'+str(st_counter)
         return None
     
     def single_case(self):
         self.solar_cases_select=pd.DataFrame(columns=self.solar_cases.columns)
         for bld in self.df_hood.building:
-            self.solar_cases_select=pd.concat([self.solar_cases_select,self.solar_cases.loc[
-                self.solar_cases.bld_name==bld,:].loc[
-                    self.solar_cases.Techno=='pv',:].loc[
-                        self.solar_cases['ICPe']==self.solar_cases.loc[
-                            self.solar_cases.bld_name==bld,:].loc[
-                                self.solar_cases.Techno=='pv','ICPe'].max(),:]],axis=0)       
-
-            self.solar_cases_select=pd.concat([self.solar_cases_select,self.solar_cases.loc[            
-            self.solar_cases.bld_name==bld,:].loc[
-                self.solar_cases.Techno=='solarCollector',:].loc[
-                    self.solar_cases['ICPth']==self.solar_cases.loc[
-                        self.solar_cases.bld_name==bld,:].loc[
-                            self.solar_cases.Techno=='solarCollector','ICPth'].max(),:]],axis=0)
             
-            self.solar_cases_select=pd.concat([self.solar_cases_select,self.solar_cases.loc[
-            self.solar_cases.bld_name==bld,:].loc[
-                self.solar_cases.Techno=='pvt',:].loc[
-                    self.solar_cases['ICPth']==self.solar_cases.loc[
-                        self.solar_cases.bld_name==bld,:].loc[
-                            self.solar_cases.Techno=='pvt','ICPth'].max(),:]],axis=0)
-            
+            for tec in self.tecno_list:
+                select=self.solar_cases.loc[self.solar_cases.bld_name==bld,:].loc[self.solar_cases.Techno==tec,:]
+                if tec=='pv' or tec=='pvt':
+                    self.solar_cases_select=self.solar_cases_select.append(
+                        select.loc[select['ICPe'].idxmax(),:])
+                else:
+                    self.solar_cases_select=self.solar_cases_select.append(
+                        select.loc[select['ICPth'].idxmax(),:])
+                # self.solar_cases_select=pd.concat([self.solar_cases_select,select_max],axis=0)   
+                # self.solar_cases_select=self.solar_cases_select.loc[0,:]
+                # self.solar_cases_select=self.solar_cases_select.append(select_max)
+            pv_counter=0
+            pvt_counter=0
+            st_counter=0
+            for i in range (self.solar_cases_select.index.size):
+                if self.solar_cases_select.bld_name.iloc[i]==bld:
+                    if self.solar_cases_select.Techno.iloc[i]=='pvt':
+                        pvt_counter=pvt_counter+1
+                        self.solar_cases_select.loc[
+                            self.solar_cases_select.index[i],'Techno']='pvt_'+str(pvt_counter)
+                    if self.solar_cases_select.Techno.iloc[i]=='pv':
+                        pv_counter=pv_counter+1
+                        self.solar_cases_select.loc[
+                            self.solar_cases_select.index[i],'Techno']='pv_'+str(pv_counter)
+                    if self.solar_cases_select.Techno.iloc[i]=='solarCollector':
+                        st_counter=st_counter+1
+                        self.solar_cases_select.loc[
+                            self.solar_cases_select.index[i],'Techno']='solarCollector_'+str(st_counter)
         return None
             
     def write_cases(self,source):
@@ -510,7 +533,7 @@ class weather:
                 'efficiency',
                 'layout',
                 'space']
-        self.solar_cases_select.sort_values(['Techno'],axis=0,inplace=True)
+        self.solar_cases_select.sort_values(['bld_name','Techno'],axis=0,inplace=True)
         self.solar_cases_select.reset_index(drop=True,inplace=True)
         
         pv_counter=0
@@ -518,12 +541,13 @@ class weather:
         st_counter=0
         
         for casos in range(self.solar_cases_select.index.size):
+            # for bld in self.df_hood.building:
             for j in [0,2,3,4,5,6,30]:
                 w_sheet.write(casos+1,j , self.df_tecno.loc[self.df_tecno.label==
-                                                         self.solar_cases_select.loc[casos,'Techno'],header[j]].iloc[0])
+                                                         self.solar_cases_select.loc[casos,'Techno'].split('_')[0],header[j]].iloc[0])
             for j in range(11,27):
                 w_sheet.write(casos+1,j , self.df_tecno.loc[self.df_tecno.label==
-                                                         self.solar_cases_select.loc[casos,'Techno'],header[j]].iloc[0])
+                                                         self.solar_cases_select.loc[casos,'Techno'].split('_')[0],header[j]].iloc[0])
             for j in [1 ,7,8,9,10]:
                 w_sheet.write(casos+1,j , self.solar_cases_select.loc[casos,header[j]])
             
@@ -533,16 +557,16 @@ class weather:
             w_sheet.write(casos+1,28 , 19.05)
             w_sheet.write(casos+1,27 , 1)
             w_sheet.write(casos+1,32 , self.solar_cases_select.loc[casos,'ratio'])
-            if self.solar_cases_select.loc[casos,'Techno']=='pv':
+            if self.solar_cases_select.loc[casos,'Techno'].split('_')[0]=='pv':
                 pv_counter=pv_counter+1
                 w_sheet.write(casos+1,0,'pv_'+str(pv_counter))
-            if self.solar_cases_select.loc[casos,'Techno']=='pvt':
+            if self.solar_cases_select.loc[casos,'Techno'].split('_')[0]=='pvt':
                 pvt_counter=pvt_counter+1
                 w_sheet.write(casos+1,0,'pvt_'+str(pvt_counter))
-            if self.solar_cases_select.loc[casos,'Techno']=='solarCollector':
+            if self.solar_cases_select.loc[casos,'Techno'].split('_')[0]=='solarCollector':
                 st_counter=st_counter+1
                 w_sheet.write(casos+1,0,'solarCollector_'+str(st_counter))
-                
+            
             
         
         
