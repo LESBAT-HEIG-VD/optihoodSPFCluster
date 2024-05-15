@@ -532,9 +532,11 @@ class weather:
                 'roof_area',
                 'efficiency',
                 'layout',
-                'space']
-        self.solar_cases_select.sort_values(['bld_name','Techno'],axis=0,inplace=True)
+                'space',
+                'cll_alignment']
+        # self.solar_cases_select.sort_values(['bld_name','Techno'],axis=0,inplace=True)
         self.solar_cases_select.reset_index(drop=True,inplace=True)
+        self.solar_cases_select = self.solar_cases_select.rename(columns={'Techno': 'label'})
         
         pv_counter=0
         pvt_counter=0
@@ -542,14 +544,13 @@ class weather:
         
         for casos in range(self.solar_cases_select.index.size):
             # for bld in self.df_hood.building:
-            for j in [0,2,3,4,5,6,30]:
-                w_sheet.write(casos+1,j , self.df_tecno.loc[self.df_tecno.label==
-                                                         self.solar_cases_select.loc[casos,'Techno'].split('_')[0],header[j]].iloc[0])
-            for j in range(11,27):
-                w_sheet.write(casos+1,j , self.df_tecno.loc[self.df_tecno.label==
-                                                         self.solar_cases_select.loc[casos,'Techno'].split('_')[0],header[j]].iloc[0])
-            for j in [1 ,7,8,9,10]:
+            for j in [0,1,7,8,9,10]:
                 w_sheet.write(casos+1,j , self.solar_cases_select.loc[casos,header[j]])
+            for j in [2,3,4,5,6,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,30]:
+                w_sheet.write(casos+1,j , self.df_tecno.loc[self.df_tecno.label==
+                                                         self.solar_cases_select.loc[casos,'label'].split('_')[0],header[j]].iloc[0])
+            # for j in [1 ,7,8,9,10]:
+            #     w_sheet.write(casos+1,j , self.solar_cases_select.loc[casos,header[j]])
             
             w_sheet.write(casos+1,31 , self.solar_cases_select.loc[casos,'cll_layout'])
             w_sheet.write(casos+1,29 , self.df_hood.loc[
@@ -557,15 +558,16 @@ class weather:
             w_sheet.write(casos+1,28 , 19.05)
             w_sheet.write(casos+1,27 , 1)
             w_sheet.write(casos+1,32 , self.solar_cases_select.loc[casos,'ratio'])
-            if self.solar_cases_select.loc[casos,'Techno'].split('_')[0]=='pv':
-                pv_counter=pv_counter+1
-                w_sheet.write(casos+1,0,'pv_'+str(pv_counter))
-            if self.solar_cases_select.loc[casos,'Techno'].split('_')[0]=='pvt':
-                pvt_counter=pvt_counter+1
-                w_sheet.write(casos+1,0,'pvt_'+str(pvt_counter))
-            if self.solar_cases_select.loc[casos,'Techno'].split('_')[0]=='solarCollector':
-                st_counter=st_counter+1
-                w_sheet.write(casos+1,0,'solarCollector_'+str(st_counter))
+            w_sheet.write(casos+1,33 , self.solar_cases_select.loc[casos,'cll_alignment'])
+            # if self.solar_cases_select.loc[casos,'Techno'].split('_')[0]=='pv':
+            #     pv_counter=pv_counter+1
+            #     w_sheet.write(casos+1,0,'pv_'+str(pv_counter))
+            # if self.solar_cases_select.loc[casos,'Techno'].split('_')[0]=='pvt':
+            #     pvt_counter=pvt_counter+1
+            #     w_sheet.write(casos+1,0,'pvt_'+str(pvt_counter))
+            # if self.solar_cases_select.loc[casos,'Techno'].split('_')[0]=='solarCollector':
+            #     st_counter=st_counter+1
+            #     w_sheet.write(casos+1,0,'solarCollector_'+str(st_counter))
             
             
         

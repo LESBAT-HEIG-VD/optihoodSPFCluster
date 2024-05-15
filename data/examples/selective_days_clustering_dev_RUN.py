@@ -36,7 +36,7 @@ if __name__ == '__main__':
                     """ file management"""
                     # define paths for input and result files
                     inputFilePath = r"..\excels\clustering"
-                    inputfileName = "scenario_Annual_2_costs_100%_SH35_cluster_HPOnly.xls"
+                    inputfileName = "scenario_Annual_4_costs_100%_SH35_cluster_HPOnly.xls"
                     # inputfileName = "scenario.xls"
                     
                     resultFilePath =r"..\results"
@@ -48,7 +48,7 @@ if __name__ == '__main__':
                     """ initialize parameters"""
                     # set a time period for the optimization problem according to the size of clusers
                     timePeriod = pd.date_range("2021-01-01 00:00:00", "2021-12-31 23:00:00", freq="60min")
-                    numberOfBuildings = 2
+                    numberOfBuildings = 4
                     optimizationType = "env"  # set as "env" for environmental optimization
                     mergeLinkBuses_bool=mm  
                     constraints_opt=["roof area"]
