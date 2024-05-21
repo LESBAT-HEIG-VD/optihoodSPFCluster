@@ -89,6 +89,10 @@ class EnergyNetworkClass(solph.EnergySystem):
                 [nodesData["electricity_impact"].loc[d] * clusterSize[d] for d in clusterSize.keys()])
             electricityCost = pd.concat(
                 [nodesData["electricity_cost"].loc[d] * clusterSize[d] for d in clusterSize.keys()])
+            # electricityCost = pd.concat(
+            #     [nodesData["electricity_cost"].loc[d] * clusterSize[d] for d in clusterSize.keys()])
+            el_price_index= pd.concat(
+                [nodesData["el_price_index"].loc[d]  for d in clusterSize.keys()])
             if 'natGas_impact' in nodesData:
                 natGasImpact = pd.concat(
                     [nodesData["natGas_impact"].loc[d] * clusterSize[d] for d in clusterSize.keys()])
@@ -102,11 +106,15 @@ class EnergyNetworkClass(solph.EnergySystem):
             nodesData["demandProfiles"] = demandProfiles
             nodesData["electricity_impact"] = electricityImpact
             nodesData["electricity_cost"] = electricityCost
+            nodesData["el_price_index"] = el_price_index
+            
             if 'natGas_impact' in nodesData:
                 nodesData["natGas_impact"] = natGasImpact
                 nodesData["natGas_cost"] = natGasCost
             nodesData["weather_data"] = weatherData
 
+        self.var_el_cost_index=nodesData["el_price_index"]
+        self.var_el_cost=nodesData["electricity_cost"]        
         self._convertNodes(nodesData, opt, mergeLinkBuses, includeCarbonBenefits, clusterSize)
         logging.info("Nodes from Excel file {} successfully converted".format(filePath))
         self.add(*self._nodesList)
@@ -157,7 +165,7 @@ class EnergyNetworkClass(solph.EnergySystem):
                 nodesData["demandProfiles"][i + 1].set_index("timestamp", inplace=True)
                 nodesData["demandProfiles"][i + 1].index = pd.to_datetime(nodesData["demandProfiles"][i + 1].index)
 
-        if type(electricityImpact) == np.float64:
+        if type(electricityImpact) == np.float:
             # for constant impact
             electricityImpactValue = electricityImpact
             logging.info("Constant value for electricity impact")
@@ -172,8 +180,9 @@ class EnergyNetworkClass(solph.EnergySystem):
             # set datetime index
             nodesData["electricity_impact"].set_index("timestamp", inplace=True)
             nodesData["electricity_impact"].index = pd.to_datetime(nodesData["electricity_impact"].index)
-
-        if type(electricityCost) == np.float64:
+            
+            
+        if type(electricityCost) == np.float:
             # for constant cost
             electricityCostValue = electricityCost
             logging.info("Constant value for electricity cost")
@@ -181,6 +190,10 @@ class EnergyNetworkClass(solph.EnergySystem):
             nodesData["electricity_cost"]["cost"] = (nodesData["demandProfiles"][1].shape[0]) * [
                 electricityCostValue]
             nodesData["electricity_cost"].index = nodesData["demandProfiles"][1].index
+            nodesData["el_price_index"]=nodesData["electricity_cost"].copy()
+            nodesData["el_price_index"].rename(columns={'cost':'el_price_index'})
+            nodesData["el_price_index"]=0
+            
         elif not os.path.exists(electricityCost):
             logging.error("Error in electricity cost file path")
         else:
@@ -188,6 +201,19 @@ class EnergyNetworkClass(solph.EnergySystem):
             # set datetime index
             nodesData["electricity_cost"].set_index("timestamp", inplace=True)
             nodesData["electricity_cost"].index = pd.to_datetime(nodesData["electricity_cost"].index)
+            nodesData["electricity_cost"]['cost']=nodesData["electricity_cost"]['cost'].ffill()
+            cost_low=np.quantile(nodesData["electricity_cost"]['cost'],0.25)
+            cost_high=np.quantile(nodesData["electricity_cost"]['cost'],0.75)
+            nodesData["el_price_index"]=nodesData["electricity_cost"].copy()
+            nodesData["el_price_index"]=nodesData["el_price_index"].rename(columns={'cost':'el_price_index'})
+            nodesData["el_price_index"]['el_price_index']=0
+            
+                # nodesData["electricity_cost"]["price_index"]='Mid'
+            nodesData["el_price_index"].loc[nodesData["electricity_cost"]['cost']<cost_low,"el_price_index"]=-1
+            nodesData["el_price_index"].loc[nodesData["electricity_cost"]['cost']>cost_high,"el_price_index"]=1
+            nodesData["el_price_index"]['el_price_index']=nodesData["el_price_index"]['el_price_index'].fillna(0)
+            
+            logging.info("Variable value for electricity cost")
 
         if "naturalGasResource" in nodesData["commodity_sources"]["label"].values:
             if type(natGasImpact) == float or (natGasImpact.split('.')[0].replace('-','').isdigit() and natGasImpact.split('.')[1].replace('-','').isdigit()):
@@ -206,7 +232,7 @@ class EnergyNetworkClass(solph.EnergySystem):
                 nodesData["natGas_impact"].set_index("timestamp", inplace=True)
                 nodesData["natGas_impact"].index = pd.to_datetime(nodesData["natGas_impact"].index)
 
-            if type(natGasCost) == np.float64:
+            if type(natGasCost) == np.float:
                 # for constant cost
                 natGasCostValue = natGasCost
                 logging.info("Constant value for natural gas cost")
@@ -336,7 +362,8 @@ class EnergyNetworkClass(solph.EnergySystem):
             print(oobj + ":", n.label)
         print("*********************************************************")
 
-    def optimize(self, numberOfBuildings, solver, envImpactlimit=1000000, 
+    def optimize(self, numberOfBuildings, solver, envImpactlimit=1000000,
+                 flexLimit=1,
                  clusterSize={},
                  clusterBook={},
                  options=None,   # solver options
@@ -354,6 +381,10 @@ class EnergyNetworkClass(solph.EnergySystem):
         # add constraint to limit the environmental impacts
         optimizationModel, flows, transformerFlowCapacityDict, storageCapacityDict = environmentalImpactlimit(
             optimizationModel, keyword1="env_per_flow", keyword2="env_per_capa", limit=envImpactlimit,clusterSZ=clusterSize)
+        
+        # add constraint to limit/prescribe the requires grid flexibility
+        optimizationModel, flows, transformerFlowCapacityDict, storageCapacityDict = flexibilityConstraint(
+            optimizationModel, keyword1="variable_costs", limit=flexLimit,clusterSZ=clusterSize,el_price_index=self.var_el_cost_index)
 
         # optional constraints (available: 'roof area')
         if optConstraints:
@@ -369,9 +400,15 @@ class EnergyNetworkClass(solph.EnergySystem):
                                       f"please check if PV efficiency, roof area and zenith angle are present in input "
                                       f"file")
                         pass
+                
                 if c.lower() == 'totalpvcapacity':
                     optimizationModel = totalPVCapacityConstraint(optimizationModel, numberOfBuildings)
                     logging.info(f"Optional constraint {c} successfully added to the optimization model")
+                
+                # if c.lower() == 'flexibility':
+                #     optimizationModel = flexibilityConstraint(optimizationModel, numberOfBuildings)
+                #     logging.info(f"Optional constraint {c} successfully added to the optimization model")    
+        
         # constraint on elRod combined with HPs:
         if not np.isnan(self.__elRodEff):
             optimizationModel = electricRodCapacityConstaint(optimizationModel, numberOfBuildings)
@@ -1223,6 +1260,8 @@ class EnergyNetworkGroup(EnergyNetworkClass):
                 [nodesData["electricity_impact"].loc[d]*clusterSize[d] for d in clusterSize.keys()])
             electricityCost = pd.concat(
                 [nodesData["electricity_cost"].loc[d]*clusterSize[d] for d in clusterSize.keys()])
+            el_price_index = pd.concat(
+                [nodesData["el_price_index"].loc[d] for d in clusterSize.keys()])
             if 'natGas_impact' in nodesData:
                 natGasImpact = pd.concat(
                     [nodesData["natGas_impact"].loc[d]*clusterSize[d] for d in clusterSize.keys()])
@@ -1235,12 +1274,15 @@ class EnergyNetworkGroup(EnergyNetworkClass):
             nodesData["demandProfiles"] = demandProfiles
             nodesData["electricity_impact"] = electricityImpact
             nodesData["electricity_cost"] = electricityCost
+            nodesData["el_price_index"] = el_price_index
             if 'natGas_impact' in nodesData:
                 nodesData["natGas_impact"] = natGasImpact
                 nodesData["natGas_cost"] = natGasCost
             nodesData["weather_data"] = weatherData
 
         nodesData["links"]= data.parse("links")
+        self.var_el_cost_index=nodesData["el_price_index"]
+        self.var_el_cost=nodesData["electricity_cost"]   
         self._convertNodes(nodesData, opt, mergeLinkBuses, includeCarbonBenefits, clusterSize)
         self._addLinks(nodesData["links"], numberOfBuildings, mergeLinkBuses)
         logging.info("Nodes from Excel file {} successfully converted".format(filePath))

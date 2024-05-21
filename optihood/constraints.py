@@ -249,3 +249,54 @@ def PVTElectricalThermalCapacityConstraint(om, numBuildings):
                 pyo.Constraint(expr=expr),
             )
     return om
+
+def flexibilityConstraint(om, keyword1, limit=None,clusterSZ={},el_price_index={}):
+    """
+    Based on: oemof.solph.constraints.emission_limit
+    Function to limit the environmental impacts during the multi-objective optimization
+    :param om: model
+    :param keyword1: keyword for variable costs per flow, placed in a solph.Flow() object
+   :param limit: limit not to be reached
+    :return:
+    """
+    flows = {}
+    transformerFlowCapacityDict = {}
+    storageCapacityDict = {}
+    for (i, o) in om.flows:
+        if hasattr(om.flows[i, o], keyword1):
+            print(i)
+            print('-')
+            print(o)
+            flows[(i, o)] = om.flows[i, o]
+        
+    varCost = "flexibility"
+    cluster_vector=[]
+    if clusterSZ!={}:        
+        for d in clusterSZ:
+            for i in range(24):
+                cluster_vector.append({}) 
+                cluster_vector[-1]=clusterSZ[d]
+    else:
+        for t in om.TIMESTEPS:
+            cluster_vector.append({}) 
+            cluster_vector[-1]=1
+    setattr(
+        om,
+        varCost,
+        pyo.Expression(
+            expr=sum(
+            # Flexibility computations
+                om.flow[inflow, outflow, t]
+                * om.timeincrement[t]
+                * sequence(getattr(flows[inflow, outflow], keyword1))[t]
+                * el_price_index[t]
+                for (inflow, outflow) in flows
+                for t in om.TIMESTEPS
+            )
+            ))
+    setattr(
+        om,
+        varCost + "_constraint",
+        pyo.Constraint(expr=(getattr(om, varCost) <= limit)),
+    )
+    return om, flows, transformerFlowCapacityDict, storageCapacityDict

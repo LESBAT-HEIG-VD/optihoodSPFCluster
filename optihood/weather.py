@@ -230,6 +230,7 @@ class weather:
             self.tecno_list=['pv', 'solarCollector', 'pvt']
             self.layout_list=['east-west','portrait']
             self.arrangement_list=['south','long','short',]
+            self.tecno_db=pd.DataFrame(columns=self.tecno_list)
             optimality_list=['']
             for bld in self.df_hood.building:    
                 ### method to acquire buiding hourly thermal and electricity demand
@@ -244,8 +245,8 @@ class weather:
                 tecno_PV=self.df_hood.loc[self.df_hood.building==bld,'pv'].iloc[0]
                 tecno_ST=self.df_hood.loc[self.df_hood.building==bld,'solarCollector'].iloc[0]
                 tecno_PVT=self.df_hood.loc[self.df_hood.building==bld,'pvt'].iloc[0]
-                tecno_flag=[tecno_PV, tecno_ST, tecno_PVT]
-                
+                self.tecno_flag=[tecno_PV, tecno_ST, tecno_PVT]
+                self.tecno_db.loc[len(self.tecno_db)]=self.tecno_flag
                 
                 
                 for lay in self.layout_list:
@@ -262,8 +263,8 @@ class weather:
                         self.opt_tilt=0
                         for opt in opt_type:    
                             for i in range(3):
-                                if tecno_flag[i]==1:
-                            
+                                # if self.tecno_flag[i]==1:
+                                if self.tecno_db.iloc[int(bld-1),i]==1:
                                 # case 1: portait parallel to building on short side
                                 #         PVGIS optimal tilt
                                 #         minimum interdistance is 0.6m
@@ -370,18 +371,20 @@ class weather:
         self.solar_cases_select=pd.DataFrame(columns=self.solar_cases.columns)
         for bld in self.df_hood.building:
             for lay in self.layout_list:
-                for tec in self.tecno_list:
-                    select=self.solar_cases.loc[
-                        self.solar_cases.bld_name==bld,:].loc[
-                            self.solar_cases.cll_layout==lay,:].loc[
-                            self.solar_cases.Techno==tec,:]
-                                
-                    if tec=='pv' or tec=='pvt':
-                        self.solar_cases_select=self.solar_cases_select.append(
-                            select.loc[select['ICPe'].idxmax(),:])
-                    else:
-                        self.solar_cases_select=self.solar_cases_select.append(
-                            select.loc[select['ICPth'].idxmax(),:])
+                for i in range(3):
+                    if self.tecno_db.iloc[int(bld-1),i]==1:
+                        tec = self.tecno_db.columns[i]                    
+                        select=self.solar_cases.loc[
+                            self.solar_cases.bld_name==bld,:].loc[
+                                self.solar_cases.cll_layout==lay,:].loc[
+                                self.solar_cases.Techno==tec,:]
+                                    
+                        if tec=='pv' or tec=='pvt':
+                            self.solar_cases_select=self.solar_cases_select.append(
+                                select.loc[select['ICPe'].idxmax(),:])
+                        else:
+                            self.solar_cases_select=self.solar_cases_select.append(
+                                select.loc[select['ICPth'].idxmax(),:])
                 # self.solar_cases_select=pd.concat([self.solar_cases_select,self.solar_cases.loc[
                 #     self.solar_cases.bld_name==bld,:].loc[
                 #         self.solar_cases.Techno=='pv',:].loc[
@@ -460,18 +463,19 @@ class weather:
     def single_case(self):
         self.solar_cases_select=pd.DataFrame(columns=self.solar_cases.columns)
         for bld in self.df_hood.building:
-            
-            for tec in self.tecno_list:
-                select=self.solar_cases.loc[self.solar_cases.bld_name==bld,:].loc[self.solar_cases.Techno==tec,:]
-                if tec=='pv' or tec=='pvt':
-                    self.solar_cases_select=self.solar_cases_select.append(
-                        select.loc[select['ICPe'].idxmax(),:])
-                else:
-                    self.solar_cases_select=self.solar_cases_select.append(
-                        select.loc[select['ICPth'].idxmax(),:])
-                # self.solar_cases_select=pd.concat([self.solar_cases_select,select_max],axis=0)   
-                # self.solar_cases_select=self.solar_cases_select.loc[0,:]
-                # self.solar_cases_select=self.solar_cases_select.append(select_max)
+            for i in range(3):
+                if self.tecno_db.iloc[int(bld-1),i]==1:
+                    tec = self.tecno_db.columns[i]
+                    select=self.solar_cases.loc[self.solar_cases.bld_name==bld,:].loc[self.solar_cases.Techno==tec,:]
+                    if tec=='pv' or tec=='pvt':
+                        self.solar_cases_select=self.solar_cases_select.append(
+                            select.loc[select['ICPe'].idxmax(),:])
+                    else:
+                        self.solar_cases_select=self.solar_cases_select.append(
+                            select.loc[select['ICPth'].idxmax(),:])
+                    # self.solar_cases_select=pd.concat([self.solar_cases_select,select_max],axis=0)   
+                    # self.solar_cases_select=self.solar_cases_select.loc[0,:]
+                    # self.solar_cases_select=self.solar_cases_select.append(select_max)
             pv_counter=0
             pvt_counter=0
             st_counter=0

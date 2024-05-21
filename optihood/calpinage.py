@@ -132,7 +132,7 @@ class Calpinage_light:
         elif self.f_EW==True:
             POA_irradiance1 = pvlib.irradiance.get_total_irradiance(
                                     surface_tilt=self.roof.loc[0,'tilt'],
-                                    surface_azimuth=self.roof.loc[0,'cll_azimut'],#self.conv_orient+self.teta,                               
+                                    surface_azimuth=self.roof.loc[0,'cll_azimut']+90,#self.conv_orient+self.teta,                               
                                     ghi=self.ghi,
                                     dhi=self.dhi,
                                     dni=self.dni,
@@ -140,7 +140,7 @@ class Calpinage_light:
                                     solar_azimuth=solar_position['azimuth'])
             POA_irradiance2 = pvlib.irradiance.get_total_irradiance(
                                     surface_tilt=self.roof.loc[0,'tilt'],
-                                    surface_azimuth=self.roof.loc[0,'cll_azimut']+180,#self.conv_orient+self.teta,                               
+                                    surface_azimuth=self.roof.loc[0,'cll_azimut']-90,#self.conv_orient+self.teta,                               
                                     ghi=self.ghi,
                                     dhi=self.dhi,
                                     dni=self.dni,
@@ -443,11 +443,11 @@ class Calpinage_light:
                 self.roof.loc[self.roof.index.size-1,'ratio']=self.roof.loc[self.roof.index.size-1,'N_panel']*self.l*self.w/B1.area
                 self.roof.loc[self.roof.index.size-1,'tilt']=self.tilt
                 if parallel=='short':
-                    self.roof.loc[self.roof.index.size-1,'cll_azimut']=self.conv_orient-90
+                    self.roof.loc[self.roof.index.size-1,'cll_azimut']=self.conv_orient+self.teta
                 elif parallel=='long':
-                    self.roof.loc[self.roof.index.size-1,'cll_azimut']=self.conv_orient
+                    self.roof.loc[self.roof.index.size-1,'cll_azimut']=self.conv_orient+self.teta
                 elif parallel=='south':
-                    self.roof.loc[self.roof.index.size-1,'cll_azimut']=-90
+                    self.roof.loc[self.roof.index.size-1,'cll_azimut']=self.conv_orient+self.teta
                 self.roof.loc[self.roof.index.size-1,'row_dist']=self.off_row
                 
             elif self.teta<0:
@@ -545,7 +545,7 @@ class Calpinage_light:
                 self.roof.loc[self.roof.index.size,'N_panel']=self.rows.N_panel.sum()*2
                 self.roof.loc[self.roof.index.size-1,'ratio']=self.roof.loc[self.roof.index.size-1,'N_panel']*self.l*self.w/B1.area
                 self.roof.loc[self.roof.index.size-1,'tilt']=self.tilt
-                self.roof.loc[self.roof.index.size-1,'cll_azimut']=self.teta-90
+                self.roof.loc[self.roof.index.size-1,'cll_azimut']=self.conv_orient+self.teta
                 self.roof.loc[self.roof.index.size-1,'row_dist']=self.off_row
             elif self.teta>0:
                 b1 = box(B1.bounds[2]-self.l, B1.bounds[1], 
@@ -639,7 +639,7 @@ class Calpinage_light:
                 self.roof.loc[self.roof.index.size,'N_panel']=self.rows.N_panel.sum()*2
                 self.roof.loc[self.roof.index.size-1,'ratio']=self.roof.loc[self.roof.index.size-1,'N_panel']*self.l*self.w/B1.area
                 self.roof.loc[self.roof.index.size-1,'tilt']=self.tilt
-                self.roof.loc[self.roof.index.size-1,'cll_azimut']=self.teta+self.conv_orient-90
+                self.roof.loc[self.roof.index.size-1,'cll_azimut']=self.teta+self.conv_orient
                 self.roof.loc[self.roof.index.size-1,'row_dist']=self.off_row
             
         else:

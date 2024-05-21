@@ -11,23 +11,32 @@ class SolarCollector(solph.Transformer):
                  collector_tilt, roof_area, zenith_angle, collector_azimuth, eta_0, a_1, a_2, temp_collector_inlet,
                  delta_temp_n, irradiance_global,
                  irradiance_diffuse, temp_amb_col, capacityMin, capacityMax,
-                 epc, base, env_capa, env_flow, varc, dispatchMode,space):
-
-        flatPlateCollectorData = flat_plate_precalc(
-            latitude, longitude, collector_tilt, collector_azimuth, eta_0, a_1, a_2, temp_collector_inlet, delta_temp_n,
-            irradiance_global, irradiance_diffuse, temp_amb_col
-        )
-
+                 epc, base, env_capa, env_flow, varc, dispatchMode,space,f_EW):
+        if f_EW==False:
+            flatPlateCollectorData = flat_plate_precalc(
+                latitude, longitude, collector_tilt, collector_azimuth, eta_0, a_1, a_2, temp_collector_inlet, delta_temp_n,
+                irradiance_global, irradiance_diffuse, temp_amb_col
+                )
+            self.collectors_eta_c = flatPlateCollectorData['eta_c']
+            self.collectors_heat = flatPlateCollectorData['collectors_heat']/1000 #flow in kWh per m² of solar thermal panel
+        else:
+            flatPlateCollectorData1 = flat_plate_precalc(
+                latitude, longitude, collector_tilt, collector_azimuth+90, eta_0, a_1, a_2, temp_collector_inlet, delta_temp_n,
+                irradiance_global, irradiance_diffuse, temp_amb_col
+                )
+            flatPlateCollectorData2 = flat_plate_precalc(
+                latitude, longitude, collector_tilt, collector_azimuth-90, eta_0, a_1, a_2, temp_collector_inlet, delta_temp_n,
+                irradiance_global, irradiance_diffuse, temp_amb_col
+                )
+            self.collectors_eta_c = (flatPlateCollectorData1['eta_c']+flatPlateCollectorData2['eta_c'])/2
+            self.collectors_heat = (flatPlateCollectorData1['collectors_heat']+flatPlateCollectorData2['collectors_heat'])/2/1000 #flow in kWh per m² of solar thermal panel
+        
         if not (np.isnan(roof_area) or np.isnan(zenith_angle)):
             # self.surface_used = self._calculateArea(zenith_angle, collector_tilt, collector_azimuth)
             self.surface_used = 1/space
         else:
             self.surface_used = np.nan
-
-        self.collectors_eta_c = flatPlateCollectorData['eta_c']
-
-        self.collectors_heat = flatPlateCollectorData['collectors_heat']/1000 #flow in kWh per m² of solar thermal panel
-
+            
         if dispatchMode:
             investArgs = {'ep_costs':epc,
                         'minimum':capacityMin,
