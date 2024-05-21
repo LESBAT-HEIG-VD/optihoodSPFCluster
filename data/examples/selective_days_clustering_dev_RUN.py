@@ -15,7 +15,7 @@ import optihood.plot_functions as fnc
 
 if __name__ == '__main__':
 
-    cluster_N=[0]
+    cluster_N=[12]
     merge_opt=[True]
     con_opt=["Con"] #["Con","noCon"]
     clst_opt=[True]
@@ -56,7 +56,7 @@ if __name__ == '__main__':
                     if clusterBool==True:
                         MIPGap_val=0.001
                     else:
-                       MIPGap_val=0.01 
+                        MIPGap_val=0.01 
                     N_cl=clN # number of meteo day clusters
                     plot_bool=True # specify if sankey plots are required
                     
