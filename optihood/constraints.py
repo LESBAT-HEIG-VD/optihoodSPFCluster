@@ -250,7 +250,7 @@ def PVTElectricalThermalCapacityConstraint(om, numBuildings):
             )
     return om
 
-def flexibilityConstraint(om, keyword1, limit=None,clusterSZ={},el_price_index={}):
+def flexibilityConstraint(om, limit=None,clusterSZ={},el_price_index={}):
     """
     Based on: oemof.solph.constraints.emission_limit
     Function to limit the environmental impacts during the multi-objective optimization
@@ -262,38 +262,86 @@ def flexibilityConstraint(om, keyword1, limit=None,clusterSZ={},el_price_index={
     flows = {}
     transformerFlowCapacityDict = {}
     storageCapacityDict = {}
+    el_price_index_plus=el_price_index.copy()
+    el_price_index_plus.loc[el_price_index_plus.el_price_index<0]=0
+    
+    el_price_index_minus=el_price_index.copy()
+    el_price_index_minus.loc[el_price_index_minus.el_price_index>0]=0
+    
     for (i, o) in om.flows:
-        if hasattr(om.flows[i, o], keyword1):
+        if "gridBus" in i.label:
             print(i)
             print('-')
             print(o)
+            print(';')
             flows[(i, o)] = om.flows[i, o]
         
     varCost = "flexibility"
     cluster_vector=[]
+    el_price_index_p=[]
+    el_price_index_m=[]
+    
     if clusterSZ!={}:        
         for d in clusterSZ:
+            # el_price_index_p.append({})
+            # el_price_index_p[-1]=el_price_index_plus.loc[d,'el_price_index'].values
+            # el_price_index_m.append({})
+            # el_price_index_m[-1]=el_price_index_minus.loc[d,'el_price_index'].values
+            
             for i in range(24):
+                el_price_index_p.append({})
+                el_price_index_p[-1]=el_price_index_plus.loc[d,'el_price_index'].values[i]
+                el_price_index_m.append({})
+                el_price_index_m[-1]=el_price_index_minus.loc[d,'el_price_index'].values[i]
+                
                 cluster_vector.append({}) 
                 cluster_vector[-1]=clusterSZ[d]
     else:
+        el_price_index_p=el_price_index_plus.loc[:,'el_price_index'].values
+        el_price_index_m=el_price_index_minus.loc[:,'el_price_index'].values
         for t in om.TIMESTEPS:
+            el_price_index_p.append({})
+            el_price_index_p[-1]=el_price_index_plus.loc[t,'el_price_index'].values[t]
+            el_price_index_m.append({})
+            el_price_index_m[-1]=el_price_index_minus.loc[t,'el_price_index'].values[t]
+            
             cluster_vector.append({}) 
             cluster_vector[-1]=1
     setattr(
         om,
         varCost,
         pyo.Expression(
-            expr=sum(
+            expr=((sum(
             # Flexibility computations
                 om.flow[inflow, outflow, t]
-                * om.timeincrement[t]
-                * sequence(getattr(flows[inflow, outflow], keyword1))[t]
-                * el_price_index[t]
+                * om.timeincrement[t]                
+                * el_price_index_m[t]
                 for (inflow, outflow) in flows
                 for t in om.TIMESTEPS
+            )-sum(                
+                # Flexibility computations
+                    om.flow[inflow, outflow, t]
+                    * om.timeincrement[t]                
+                    * el_price_index_p[t]
+                    for (inflow, outflow) in flows
+                    for t in om.TIMESTEPS
             )
-            ))
+            )/(sum(
+            # Flexibility computations
+                om.flow[inflow, outflow, t]
+                * om.timeincrement[t]                
+                * el_price_index_m[t]
+                for (inflow, outflow) in flows
+                for t in om.TIMESTEPS
+            )+sum(                
+                # Flexibility computations
+                    om.flow[inflow, outflow, t]
+                    * om.timeincrement[t]                
+                    * el_price_index_p[t]
+                    for (inflow, outflow) in flows
+                    for t in om.TIMESTEPS
+            )))
+                ))
     setattr(
         om,
         varCost + "_constraint",
