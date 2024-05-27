@@ -253,10 +253,10 @@ def PVTElectricalThermalCapacityConstraint(om, numBuildings):
 def flexibilityConstraint(om, limit=None,clusterSZ={},el_price_index={}):
     """
     Based on: oemof.solph.constraints.emission_limit
-    Function to limit the environmental impacts during the multi-objective optimization
-    :param om: model
-    :param keyword1: keyword for variable costs per flow, placed in a solph.Flow() object
-   :param limit: limit not to be reached
+    Function to limit the grid flexibility during the multi-objective optimization
+    :param om: model    
+   :param limit: limit not to be reached ([-1,1])
+   NON WORKING AS NON LINEAR CONSTRAINT - MILP not suitable
     :return:
     """
     flows = {}

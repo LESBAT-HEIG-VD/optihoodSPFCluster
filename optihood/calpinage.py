@@ -32,7 +32,9 @@ class Calpinage_light:
                  tecno_df=None,
                  elec_demand=None,
                  heat_demand=None,
-                 irradiance=None):
+                 irradiance=None,
+                 COP_HP=3,
+                 COP_GWHP=5):
         """ Orientation is the building orientation in degrees
             lat is the roof middle latitude
             W is the roof width in [m]
@@ -70,8 +72,8 @@ class Calpinage_light:
         self.dhi=irradiance[1]
         self.dni=irradiance[2]
         self.Tair=irradiance[3]
-        self.COPa=3
-        self.COPbrine=4
+        self.COPa=COP_HP
+        self.COPbrine=COP_GWHP
         tecno_df.fillna(0,inplace=True) #could not convert to float"
         if self.tecno=='pv':
             self.elec_demand=elec_demand+heat_demand/self.COPa

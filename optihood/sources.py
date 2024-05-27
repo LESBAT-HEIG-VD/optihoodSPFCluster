@@ -7,11 +7,11 @@ import pvlib
 class PV(solph.Source):
     def __init__(self, label, buildingLabel, outputs, peripheral_losses, latitude, longitude,
                  pv_tilt, pv_efficiency, roof_area, zenith_angle, pv_azimuth, irradiance_global, irradiance_diffuse, temp_amb_pv, capacityMin,
-                 capacityMax, epc, base, env_capa, env_flow, varc, dispatchMode,space):
+                 capacityMax, epc, base, env_capa, env_flow, varc, dispatchMode,space,layout):
         # Creation of a df with 3 columns
         data = self.computePvSolarPosition(irradiance_diffuse, irradiance_global, latitude, longitude, pv_azimuth,
-                                           pv_tilt, temp_amb_pv)
-
+                                           pv_tilt, temp_amb_pv,layout)
+        #why is the minimum between an energy and a power (capacity)?
         self.pv_electricity = np.minimum(self.pv_precalc(temp_amb_pv, data['pv_ira']/1000), capacityMax + base)
 
         if not (np.isnan(roof_area) or np.isnan(zenith_angle) or np.isnan(pv_efficiency)):
@@ -47,7 +47,7 @@ class PV(solph.Source):
                                  )
 
     def computePvSolarPosition(self, irradiance_diffuse, irradiance_global, latitude, longitude, pv_azimuth, pv_tilt,
-                               temp_amb_pv):
+                               temp_amb_pv,layout):
         data = pd.DataFrame(
             {
                 'ghi': irradiance_global,
@@ -61,16 +61,37 @@ class PV(solph.Source):
         dni = pvlib.irradiance.dni(
             ghi=data['ghi'], dhi=data['dhi'], zenith=solposition['apparent_zenith']
         )
-        total_irradiation = pvlib.irradiance.get_total_irradiance(
-            surface_tilt=pv_tilt,
-            surface_azimuth=pv_azimuth,
-            solar_zenith=solposition['apparent_zenith'],
-            solar_azimuth=solposition['azimuth'],
-            dni=dni.fillna(0),  # fill NaN values with '0'
-            ghi=data['ghi'],
-            dhi=data['dhi'],
-        )
-        data['pv_ira'] = total_irradiation['poa_global']
+        if layout=='east-west':
+            total_irradiation1 = pvlib.irradiance.get_total_irradiance(
+                surface_tilt=pv_tilt,
+                surface_azimuth=pv_azimuth-90,
+                solar_zenith=solposition['apparent_zenith'],
+                solar_azimuth=solposition['azimuth'],
+                dni=dni.fillna(0),  # fill NaN values with '0'
+                ghi=data['ghi'],
+                dhi=data['dhi'],
+            )
+            total_irradiation2 = pvlib.irradiance.get_total_irradiance(
+                surface_tilt=pv_tilt,
+                surface_azimuth=pv_azimuth+90,
+                solar_zenith=solposition['apparent_zenith'],
+                solar_azimuth=solposition['azimuth'],
+                dni=dni.fillna(0),  # fill NaN values with '0'
+                ghi=data['ghi'],
+                dhi=data['dhi'],)
+            data['pv_ira'] = (total_irradiation1['poa_global']+total_irradiation2['poa_global'])/2
+        else: 
+            total_irradiation1 = pvlib.irradiance.get_total_irradiance(
+                surface_tilt=pv_tilt,
+                surface_azimuth=pv_azimuth,
+                solar_zenith=solposition['apparent_zenith'],
+                solar_azimuth=solposition['azimuth'],
+                dni=dni.fillna(0),  # fill NaN values with '0'
+                ghi=data['ghi'],
+                dhi=data['dhi'],
+            )
+            data['pv_ira'] = total_irradiation1['poa_global']
+        
         return data
 
     # model according to TriHP Energy management algorithms description. D6.2 v1.0

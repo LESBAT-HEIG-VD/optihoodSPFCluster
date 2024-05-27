@@ -122,7 +122,7 @@ class Building:
                                        data_timeseries['gls'],
                                        data_timeseries['str.diffus'],
                                        data_timeseries['tre200h0'], float(s["capacity_min"]), float(s["capacity_max"]),
-                                       epc, base, env_capa, env_flow, varc, dispatchMode, float(s["space"])))
+                                       epc, base, env_capa, env_flow, varc, dispatchMode, float(s["space"]),s['layout']))
 
             self.__envParam[s["label"] + '__' + self.__buildingLabel] = envParam
 
@@ -229,7 +229,7 @@ class Building:
                                                        float(s["eta_0"]), float(s["a_1"]), float(s["a_2"]), float(s["temp_collector_inlet"]),data_timeseries['tre200h0'],
                                                        float(s["delta_temp_n"]), data_timeseries['gls'], data_timeseries['str.diffus'], float(s["capacity_min"]), float(s["capacity_max"]),
                                                        epc, base, env_capa, env_flow, varc, dispatchMode,
-                                                        float(s["efficiency"]),0.85,float(s["space"]))
+                                                       float(s["efficiency"]),0.85,float(s["space"]),s.layout)
                 self.__nodesList.append(pvtcollector.getPVT("el_source"))
                 self.__nodesList.append(pvtcollector.getPVT("heat_source"))
                 self.__nodesList.append(pvtcollector.getPVT("heat_transformer"))

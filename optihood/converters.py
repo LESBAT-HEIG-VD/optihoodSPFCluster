@@ -103,17 +103,30 @@ class PVT(solph.Transformer):
                  collector_tilt, roof_area, zenith_angle, collector_azimuth, eta_0, a_1, a_2, temp_collector_inlet,temp_amb,
                  delta_temp_n, irradiance_global,
                  irradiance_diffuse, capacityMin, capacityMax, epc, base, env_capa, env_flow, varc, dispatchMode,
-                 pv_efficiency=0.15, taualpha=0.85,space=1):
-
-        pvdata = self.computePvSolarPosition(irradiance_diffuse, irradiance_global, latitude, longitude, collector_azimuth,
-                                           collector_tilt, temp_amb)
-        pv_electricity = np.minimum(self.pvtElPrecalc(temp_amb, temp_collector_inlet, pvdata['pv_ira'] / 1000, delta_temp_n), capacityMax + base)
-        pvtCollectorData = self.pvtThPrecalc(latitude, longitude, collector_tilt, collector_azimuth, eta_0, a_1, a_2, temp_collector_inlet, delta_temp_n,
-                                       irradiance_global, irradiance_diffuse, temp_amb,  pv_efficiency, taualpha)
+                 pv_efficiency=0.15, taualpha=0.85,space=1,layout='portrait'):
+        if layout=='east-west':
+            pvdata = self.computePvSolarPosition(irradiance_diffuse, irradiance_global, latitude, longitude, collector_azimuth,
+                                               collector_tilt, temp_amb,layout)
+            
+            pv_electricity = np.minimum(self.pvtElPrecalc(temp_amb, temp_collector_inlet, pvdata['pv_ira'] / 1000, delta_temp_n), capacityMax + base)
+            pvtCollectorData1 = self.pvtThPrecalc(latitude, longitude, collector_tilt, collector_azimuth-90, eta_0, a_1, a_2, temp_collector_inlet, delta_temp_n,
+                                           irradiance_global, irradiance_diffuse, temp_amb,  pv_efficiency, taualpha,layout)
+            pvtCollectorData2 = self.pvtThPrecalc(latitude, longitude, collector_tilt, collector_azimuth+90, eta_0, a_1, a_2, temp_collector_inlet, delta_temp_n,
+                                           irradiance_global, irradiance_diffuse, temp_amb,  pv_efficiency, taualpha,layout)
+            self.collectors_heat = (pvtCollectorData1['collectors_heat']+pvtCollectorData2['collectors_heat'])/1000/2
+            self.collectors_eta_c = (pvtCollectorData1['eta_c']+pvtCollectorData2['eta_c'])/2
+        else:                
+            pvdata = self.computePvSolarPosition(irradiance_diffuse, irradiance_global, latitude, longitude, collector_azimuth,
+                                               collector_tilt, temp_amb,layout)
+            pv_electricity = np.minimum(self.pvtElPrecalc(temp_amb, temp_collector_inlet, pvdata['pv_ira'] / 1000, delta_temp_n), capacityMax + base)
+            
+            pvtCollectorData1 = self.pvtThPrecalc(latitude, longitude, collector_tilt, collector_azimuth, eta_0, a_1, a_2, temp_collector_inlet, delta_temp_n,
+                                           irradiance_global, irradiance_diffuse, temp_amb,  pv_efficiency, taualpha,layout)
+            self.collectors_heat = (pvtCollectorData1['collectors_heat'])/1000
+            self.collectors_eta_c = (pvtCollectorData1['eta_c'])
         self.taualpha = taualpha
 
-        self.collectors_heat = pvtCollectorData['collectors_heat']/1000
-        self.collectors_eta_c = pvtCollectorData['eta_c']
+        
         self.surface_used = 1/space
         # self.surface_used = self.calculateArea(zenith_angle, collector_tilt, collector_azimuth)
         surface_used_el = 1/space/pv_efficiency
@@ -170,7 +183,7 @@ class PVT(solph.Transformer):
         )
 
     def pvtThPrecalc(self, latitude, longitude, collector_tilt, collector_azimuth, eta_0, a_1, a_2, temp_collector_inlet, delta_temp_n,
-            irradiance_global, irradiance_diffuse, temp_amb,  pv_efficiency, taualpha):
+            irradiance_global, irradiance_diffuse, temp_amb,  pv_efficiency, taualpha,layout):
         # function inspired from oemof thermal solar_thermal_collector
         # The calculation of eta_c is overriden
         data = pd.DataFrame(
@@ -186,19 +199,48 @@ class PVT(solph.Transformer):
         dni = pvlib.irradiance.dni(
             ghi=data['ghi'], dhi=data['dhi'], zenith=solposition['apparent_zenith']
         )
-        total_irradiation = pvlib.irradiance.get_total_irradiance(
-            surface_tilt=collector_tilt,
-            surface_azimuth=collector_azimuth,
-            solar_zenith=solposition['apparent_zenith'],
-            solar_azimuth=solposition['azimuth'],
-            dni=dni.fillna(0),  # fill NaN values with '0'
-            ghi=data['ghi'],
-            dhi=data['dhi'],
-        )
-        data['col_ira'] = total_irradiation['poa_global']
-        data["eta_c"] = self.calcEtaC(eta_0, a_1, a_2, temp_collector_inlet, delta_temp_n, data['temp_amb'], total_irradiation['poa_global'], pv_efficiency, taualpha)
-        collectors_heat = data["eta_c"] * total_irradiation['poa_global']
-        data["collectors_heat"] = collectors_heat
+        if layout=='east-west':            
+            total_irradiation1 = pvlib.irradiance.get_total_irradiance(
+                surface_tilt=collector_tilt,
+                surface_azimuth=collector_azimuth-90,
+                solar_zenith=solposition['apparent_zenith'],
+                solar_azimuth=solposition['azimuth'],
+                dni=dni.fillna(0),  # fill NaN values with '0'
+                ghi=data['ghi'],
+                dhi=data['dhi'],
+            )
+            total_irradiation2 = pvlib.irradiance.get_total_irradiance(
+                surface_tilt=collector_tilt,
+                surface_azimuth=collector_azimuth+90,
+                solar_zenith=solposition['apparent_zenith'],
+                solar_azimuth=solposition['azimuth'],
+                dni=dni.fillna(0),  # fill NaN values with '0'
+                ghi=data['ghi'],
+                dhi=data['dhi'],
+            )
+            data['col_ira'] = (total_irradiation1['poa_global']+total_irradiation2['poa_global'])/2
+            eta_c1=self.calcEtaC(eta_0, a_1, a_2, temp_collector_inlet, delta_temp_n, data['temp_amb'], total_irradiation1['poa_global'], pv_efficiency, taualpha)
+            eta_c2=self.calcEtaC(eta_0, a_1, a_2, temp_collector_inlet, delta_temp_n, data['temp_amb'], total_irradiation2['poa_global'], pv_efficiency, taualpha)
+            collectors_heat1 = eta_c1 * total_irradiation1['poa_global']
+            collectors_heat2 = eta_c2 * total_irradiation2['poa_global']
+            collectors_heat = (collectors_heat1+collectors_heat2)/2
+
+            data["eta_c"]=collectors_heat/data['col_ira']
+            data["collectors_heat"] = collectors_heat
+        else:
+            total_irradiation1 = pvlib.irradiance.get_total_irradiance(
+                surface_tilt=collector_tilt,
+                surface_azimuth=collector_azimuth,
+                solar_zenith=solposition['apparent_zenith'],
+                solar_azimuth=solposition['azimuth'],
+                dni=dni.fillna(0),  # fill NaN values with '0'
+                ghi=data['ghi'],
+                dhi=data['dhi'],
+            )
+            data['col_ira'] = total_irradiation1['poa_global']
+            data["eta_c"]=self.calcEtaC(eta_0, a_1, a_2, temp_collector_inlet, delta_temp_n, data['temp_amb'], total_irradiation1['poa_global'], pv_efficiency, taualpha)
+            collectors_heat = data["eta_c"] * total_irradiation1['poa_global']
+            data["collectors_heat"] = collectors_heat
         return data
 
     def calcEtaC(self, eta_0, a_1, a_2, temp_collector_inlet, delta_temp_n, temp_amb, irradiation, pv_efficiency, taualpha):
@@ -215,7 +257,7 @@ class PVT(solph.Transformer):
         return eta_c
 
     def computePvSolarPosition(self, irradiance_diffuse, irradiance_global, latitude, longitude, pv_azimuth, pv_tilt,
-                               temp_amb_pv):
+                               temp_amb_pv,layout):
         data = pd.DataFrame(
             {
                 'ghi': irradiance_global,
@@ -229,16 +271,37 @@ class PVT(solph.Transformer):
         dni = pvlib.irradiance.dni(
             ghi=data['ghi'], dhi=data['dhi'], zenith=solposition['apparent_zenith']
         )
-        total_irradiation = pvlib.irradiance.get_total_irradiance(
-            surface_tilt=pv_tilt,
-            surface_azimuth=pv_azimuth,
-            solar_zenith=solposition['apparent_zenith'],
-            solar_azimuth=solposition['azimuth'],
-            dni=dni.fillna(0),  # fill NaN values with '0'
-            ghi=data['ghi'],
-            dhi=data['dhi'],
-        )
-        data['pv_ira'] = total_irradiation['poa_global']
+        if layout=='east-west':
+            total_irradiation1 = pvlib.irradiance.get_total_irradiance(
+                surface_tilt=pv_tilt,
+                surface_azimuth=pv_azimuth-90,
+                solar_zenith=solposition['apparent_zenith'],
+                solar_azimuth=solposition['azimuth'],
+                dni=dni.fillna(0),  # fill NaN values with '0'
+                ghi=data['ghi'],
+                dhi=data['dhi'],
+            )
+            total_irradiation2 = pvlib.irradiance.get_total_irradiance(
+                surface_tilt=pv_tilt,
+                surface_azimuth=pv_azimuth+90,
+                solar_zenith=solposition['apparent_zenith'],
+                solar_azimuth=solposition['azimuth'],
+                dni=dni.fillna(0),  # fill NaN values with '0'
+                ghi=data['ghi'],
+                dhi=data['dhi'],)
+            data['pv_ira'] = (total_irradiation1['poa_global']+total_irradiation2['poa_global'])/2
+        else: 
+            total_irradiation1 = pvlib.irradiance.get_total_irradiance(
+                surface_tilt=pv_tilt,
+                surface_azimuth=pv_azimuth,
+                solar_zenith=solposition['apparent_zenith'],
+                solar_azimuth=solposition['azimuth'],
+                dni=dni.fillna(0),  # fill NaN values with '0'
+                ghi=data['ghi'],
+                dhi=data['dhi'],
+            )
+            data['pv_ira'] = total_irradiation1['poa_global']
+        
         return data
 
     # model according to TriHP Energy management algorithms description. D6.2 v1.0
