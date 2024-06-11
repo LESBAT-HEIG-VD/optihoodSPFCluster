@@ -14,6 +14,7 @@
 # Ignore result excel and image files
 **/[Rr]esults/
 **/[Ff]igures/
+**/excels/clustering/*.xls
 
 # Ignore virtual environment directory
 venv
