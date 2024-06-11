@@ -1249,7 +1249,10 @@ class EnergyNetworkGroup(EnergyNetworkClass):
         nodesData = self.createNodesData(data, filePath, numberOfBuildings)
         # nodesData["buses"]["excess costs"] = nodesData["buses"]["excess costs group"]
         # nodesData["electricity_cost"]["cost"] = nodesData["electricity_cost"]["cost group"]
-
+        """
+        nodesData["demandProfiles"][i] corresponds to the dataframe containing data for building N. i
+        
+        """
         demandProfiles = {}
         if clusterSize:
             for i in range(1, numberOfBuildings + 1):

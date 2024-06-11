@@ -15,7 +15,7 @@ import optihood.plot_functions as fnc
 
 if __name__ == '__main__':
 
-    cluster_N=[48]
+    cluster_N=[12,24,48]
     merge_opt=[True]
     con_opt=["Con"] #["Con","noCon"]
     clst_opt=[True]

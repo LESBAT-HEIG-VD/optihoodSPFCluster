@@ -17,7 +17,7 @@ class PV(solph.Source):
         if not (np.isnan(roof_area) or np.isnan(zenith_angle) or np.isnan(pv_efficiency)):
             # self.surface_used = self._calculateArea(zenith_angle, pv_tilt, pv_azimuth, pv_efficiency)
              # 1kW divided by efficiency = area of panels for 1kW
-             # 1kW panel area divided by cover ratio gives roof area occupied 
+             #  panel area for 1kW divided by cover ratio gives real roof area occupied 
             self.surface_used=1/pv_efficiency/space
         else:
             self.surface_used = np.nan
