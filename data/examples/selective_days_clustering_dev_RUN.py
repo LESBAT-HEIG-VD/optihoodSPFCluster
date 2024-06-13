@@ -101,7 +101,9 @@ if __name__ == '__main__':
                     network = EnergyNetwork(timePeriod,cluster)
                     network.setFromExcel(os.path.join(inputFilePath, inputfileName), 
                                          numberOfBuildings, clusterSize=cluster, 
-                                         opt=optimizationType,dispatchMode=False,mergeLinkBuses=mergeLinkBuses_bool)
+                                         opt=optimizationType,dispatchMode=False,
+                                         mergeLinkBuses=mergeLinkBuses_bool,
+                                         mergeHeatSourceSink=False)
                     
                     optimizationOptions = {
                         "gurobi": {

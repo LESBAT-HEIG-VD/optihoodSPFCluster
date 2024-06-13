@@ -10,7 +10,7 @@ class PV(solph.Source):
                  capacityMax, epc, base, env_capa, env_flow, varc, dispatchMode,space,layout):
         # Creation of a df with 3 columns
         data = self.computePvSolarPosition(irradiance_diffuse, irradiance_global, latitude, longitude, pv_azimuth,
-                                           pv_tilt, temp_amb_pv)
+                                           pv_tilt, temp_amb_pv,layout)
 
         self.pv_electricity = np.minimum(self.pv_precalc(temp_amb_pv, data['pv_ira']/1000), capacityMax)
 

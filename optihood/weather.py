@@ -478,7 +478,7 @@ class weather:
         wb = copy(workbook)
         w_sheet = wb.get_sheet('solar')
         for i in range(1, 100):
-            for j in range(33):
+            for j in range(50):
                 w_sheet.write(i, j, label=None)
         header = ['label',
                   'bld_name',

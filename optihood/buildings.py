@@ -139,7 +139,7 @@ class Building:
                                            data_timeseries['gls'],
                                            data_timeseries['str.diffus'],
                                            data_timeseries['tre200h0'], float(s["capacity_min"]), float(s["capacity_max"]),
-                                           epc, base, env_capa, env_flow, varc, dispatchMode))
+                                           epc, base, env_capa, env_flow, varc, dispatchMode,float(s["space"]),s["layout"]))
 
                 self.__envParam[s["label"] + '__' + self.__buildingLabel] = envParam
 
@@ -190,7 +190,7 @@ class Building:
                                                        float(s["eta_0"]), float(s["a_1"]), float(s["a_2"]), float(s["temp_collector_inlet"]),
                                                        float(s["delta_temp_n"]), data_timeseries['gls'], data_timeseries['str.diffus'],
                                                         data_timeseries['tre200h0'], float(s["capacity_min"]), float(s["capacity_max"]),
-                                                       epc, base, env_capa, env_flow, varc, dispatchMode)
+                                                       epc, base, env_capa, env_flow, varc, dispatchMode,float(s["space"]),s["cll_alignment"])
                 self.__nodesList.append(collector.getSolar("source"))
                 self.__nodesList.append(collector.getSolar("transformer"))
                 self.__nodesList.append(collector.getSolar("sink"))
