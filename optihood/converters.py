@@ -16,7 +16,11 @@ class SolarCollector:
                  collector_tilt, roof_area, zenith_angle, collector_azimuth, eta_0, a_1, a_2, temp_collector_inlet,
                  delta_temp_n, irradiance_global,
                  irradiance_diffuse, temp_amb_col, capacityMin, capacityMax,
-                 epc, base, env_capa, env_flow, varc, dispatchMode,space,f_EW):
+                 epc, base, env_capa, env_flow, varc, dispatchMode,space,layout):
+        if layout not in ['portrait','superposed']:
+            f_EW=True
+        else:
+            f_EW=False
         if f_EW==False:
             flatPlateCollectorData = flat_plate_precalc(
                 latitude, longitude, collector_tilt, collector_azimuth, eta_0, a_1, a_2, temp_collector_inlet, delta_temp_n,
@@ -36,9 +40,9 @@ class SolarCollector:
             self.collectors_eta_c = (flatPlateCollectorData1['eta_c']+flatPlateCollectorData2['eta_c'])/2
             self.collectors_heat = (flatPlateCollectorData1['collectors_heat']+flatPlateCollectorData2['collectors_heat'])/2/1000 #flow in kWh per m² of solar thermal panel
         
-        if not (np.isnan(roof_area) or np.isnan(zenith_angle)):
+        if not np.isnan(roof_area):# or np.isnan(zenith_angle)):
             # self.surface_used = self._calculateArea(zenith_angle, collector_tilt, collector_azimuth)
-            self.surface_used = 1/space
+            self.surface_used = 1/space#/self.collectors_eta_c.max()
         else:
             self.surface_used = np.nan
             
@@ -142,8 +146,8 @@ class PVT(solph.Transformer):
         self.collectors_heat_dhw = pvtCollectorData_dhw['collectors_heat'] / 1000
         self.collectors_eta_c_sh = pvtCollectorData_sh['eta_c']
         self.collectors_eta_c_dhw = pvtCollectorData_dhw['eta_c']
-        self.surface_used = self.calculateArea(zenith_angle, collector_tilt, collector_azimuth)
-        surface_used_el = self.calculateArea(zenith_angle, collector_tilt, collector_azimuth, pv_efficiency)
+        self.surface_used = 1/space#/np.max(self.collector_eta_c_sh,self.collector_eta_c_dhw)#self.calculateArea(zenith_angle, collector_tilt, collector_azimuth)
+        surface_used_el = 1/space/pv_efficiency#self.calculateArea(zenith_angle, collector_tilt, collector_azimuth, pv_efficiency)
         if dispatchMode:
             investArgsEl = {'ep_costs':0,
                          'minimum':capacityMin,

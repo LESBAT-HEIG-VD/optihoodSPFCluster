@@ -14,7 +14,7 @@ class PV(solph.Source):
 
         self.pv_electricity = np.minimum(self.pv_precalc(temp_amb_pv, data['pv_ira']/1000), capacityMax)
 
-        if not (np.isnan(roof_area) or np.isnan(zenith_angle) or np.isnan(pv_efficiency)):
+        if not (np.isnan(roof_area) or np.isnan(pv_efficiency)):
             # self.surface_used = self._calculateArea(zenith_angle, pv_tilt, pv_azimuth, pv_efficiency)
              # 1kW divided by efficiency = area of panels for 1kW
              #  panel area for 1kW divided by cover ratio gives real roof area occupied 
@@ -73,7 +73,7 @@ class PV(solph.Source):
             )
             total_irradiation2 = pvlib.irradiance.get_total_irradiance(
                 surface_tilt=pv_tilt,
-                surface_azimuth=pv_azimuth+90,
+                surface_azimuth=+pv_azimuth+90,
                 solar_zenith=solposition['apparent_zenith'],
                 solar_azimuth=solposition['azimuth'],
                 dni=dni.fillna(0),  # fill NaN values with '0'
