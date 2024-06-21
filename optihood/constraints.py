@@ -77,6 +77,9 @@ def environmentalImpactlimit(om, keyword1, keyword2, limit=None):
     for (i, o) in om.flows:
         if hasattr(om.flows[i, o], keyword1):
             flows[(i, o)] = om.flows[i, o]
+            print(i)
+            print('-')
+            print(o)
         if hasattr(om.flows[i, o].investment, keyword2):
             transformerFlowCapacityDict[(i, o)] = om.flows[i, o].investment
 

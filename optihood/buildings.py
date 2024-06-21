@@ -248,9 +248,9 @@ class Building:
                                                        float(s["longitude"]), float(s["tilt"]), s["roof_area"],
                                                        float(s["zenith_angle"]), float(s["azimuth"]),
                                                        float(s["eta_0"]), float(s["a_1"]), float(s["a_2"]), float(s["temp_collector_inlet"]),data_timeseries['tre200h0'],
-                                                       float(s["delta_temp_n"]), data_timeseries['gls'], data_timeseries['str.diffus'], float(s["capacity_min"]), float(s["capacity_max"]),
+                                                       s["delta_temp_n"].split(','), data_timeseries['gls'], data_timeseries['str.diffus'], float(s["capacity_min"]), float(s["capacity_max"]),
                                                        epc, base, env_capa, env_flow, varc, dispatchMode,
-                                                        float(s["pv_efficiency"]))
+                                                        float(s["efficiency"]))
                 nodes = [pvtcollector.getPVT("el_source")]
                 for t in ["heat_source", "heat_transformer", "excess_heat_sink"]:
                     nodes.append(pvtcollector.getPVT(t))

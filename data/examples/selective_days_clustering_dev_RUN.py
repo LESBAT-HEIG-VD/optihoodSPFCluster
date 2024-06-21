@@ -69,8 +69,10 @@ if __name__ == '__main__':
                                      load_file=False,
                                      set_scenario=True,
                                      single_scenario=False)
-                    
-                    
+                    # create electricity profile based on Romande Energie tarif
+                    # or spot profile in electricity_spot.csv
+                    # options are : "Tarif" or "Spot"
+                    meteo_data.elec(profile_elec="Tarif")
                     """declare custom cluster vector & code Book here to bypass 
                     cluster computation by weather class"""
                     # {"2021-07-30": 26,

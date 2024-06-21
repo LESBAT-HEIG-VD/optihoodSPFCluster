@@ -110,7 +110,8 @@ class Calpinage_light:
             self.PVT_Tin=float(tecno_df.loc[tecno_df.label=='pvt',
                                     'temp_collector_inlet'])
             self.PVT_DT=float(tecno_df.loc[tecno_df.label=='pvt',
-                                    'delta_temp_n'])
+                                    'delta_temp_n'].values[0]. \
+                              split(',')[0])
             self.l=float(tecno_df.loc[tecno_df.label=='pvt','length'])
             self.w=float(tecno_df.loc[tecno_df.label=='pvt','width'])
         

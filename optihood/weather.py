@@ -89,7 +89,149 @@ class weather:
             self.save_DB(self.target)
 
         return None
-
+    
+    def load_table_values(self):
+        self.En_HP=self.tarfElec_table.loc[ self.tarfElec_table.Profil==self.profile,'En_HP'].values[0]
+        self.En_HC=self.tarfElec_table.loc[ self.tarfElec_table.Profil==self.profile,'En_HC'].values[0]
+        self.Tr_r_HP=self.tarfElec_table.loc[ self.tarfElec_table.Profil==self.profile,'Tr_r_HP'].values[0]
+        self.Tr_r_HC=self.tarfElec_table.loc[ self.tarfElec_table.Profil==self.profile,'Tr_r_HC'].values[0]
+        self.Tr_r_abo=self.tarfElec_table.loc[ self.tarfElec_table.Profil==self.profile,'Tr_r_abo'].values[0]
+        self.Tr_r_Pw=self.tarfElec_table.loc[ self.tarfElec_table.Profil==self.profile,'Tr_r_Pw'].values[0]
+        self.Tr_N_HP=self.tarfElec_table.loc[ self.tarfElec_table.Profil==self.profile,'Tr_N_HP'].values[0]
+        self.Tr_N_HC=self.tarfElec_table.loc[ self.tarfElec_table.Profil==self.profile,'Tr_N_HC'].values[0]            
+        self.Tr_N_Pw=self.tarfElec_table.loc[ self.tarfElec_table.Profil==self.profile,'Tr_N_Pw'].values[0]
+        self.Taxes=self.tarfElec_table.loc[ self.tarfElec_table.Profil==self.profile,'Taxes'].values[0]
+        return None
+        
+    
+    
+    def elec(self,profile_elec="Tarif"):
+        self.demand_elec_tot=self.agg_demand.electricityDemand+ \
+            (self.agg_demand.spaceHeatingDemand+
+            self.agg_demand.domesticHotWaterDemand)/self.COP_HP
+        # self.demand_elec_tot.timestamp = self.year_index
+        self.demand_elec_tot=self.demand_elec_tot.to_frame(name='elecCons')
+        # self.demand_elec_tot.timestamp =pd.to_datetime(self.year_index)
+        self.demand_elec_tot=self.demand_elec_tot.sort_index()
+        self.demand_elec_tot['cost']=0
+        self.summer_end=str(self.demand_elec_tot.index[0].year)+"-10-01"
+        self.summer_start=str(self.demand_elec_tot.index[0].year)+"-04-01"
+        self.HP_start=6
+        self.HP_end=22
+        self.el_prof_list=['Double',
+                           'Pro_BT_L',
+                           'Pro_BT_H',	
+                           'Pro_MT_L_SUMMER'	,
+                           'Pro_MT_L_Winter'	,
+                           'Pro_MT_H_SUMMER'	,
+                           'Pro_MT_H_Winter']
+        self.tarfElec_table = pd.read_csv(r'..\excels\clustering\TarifElec.csv', sep=";")
+        self.tarfElec_table.dropna(inplace=True)
+        self.pic_elec_demand=self.demand_elec_tot.elecCons.max()
+        if profile_elec=="Tarif":
+            if self.demand_elec_tot['elecCons'].sum()<50000:
+                self.profile='Double'
+            elif self.demand_elec_tot['elecCons'].sum()>1500000 and \
+                self.pic_elec_demand>500:
+                if self.demand_elec_tot['elecCons'].sum()/self.pic_elec_demand<3000:
+                    self.profile='Pro_MT_L_Winter'
+                else:
+                    self.profile='Pro_MT_H_Winter'
+            else:
+                if self.demand_elec_tot['elecCons'].sum()/self.pic_elec_demand<3000:
+                    self.profile='Pro_BT_L'
+                else:
+                    self.profile='Pro_BT_H'
+            self.load_table_values()        
+            self.demand_elec_tot['cost']=(self.En_HC+ \
+                                               self.Tr_r_HC+ \
+                                                   self.Tr_r_abo*12/365/24*100+ \
+                                            self.Tr_r_Pw*self.pic_elec_demand/365/24*100+ \
+                                            self.Tr_N_HC+ \
+                                            self.Tr_N_Pw*self.pic_elec_demand/365/24*100+ \
+                                            self.Taxes)/100
+            self.demand_elec_tot.loc[(self.demand_elec_tot.index.hour>self.HP_start) &
+                                     (self.demand_elec_tot.index.hour<self.HP_end),'cost']= \
+                                                    (self.En_HP+ \
+                                                    self.Tr_r_HP+ \
+                                                    self.Tr_r_abo*12/365/24*100+ \
+                                                    self.Tr_r_Pw*self.pic_elec_demand/365/24*100+ \
+                                                    self.Tr_N_HP+ \
+                                                    self.Tr_N_Pw*self.pic_elec_demand/365/24*100+ \
+                                                    self.Taxes)/100
+            if 'MT' in self.profile:
+                self.profile=self.profile.split(sep='_W')[0]+"_SUMMER"
+                self.load_table_values()
+                self.demand_elec_tot.loc[ self.summer_start: self.summer_end,
+                                     'cost']=(self.En_HC+ \
+                                                self.Tr_r_HC+ \
+                                                self.Tr_r_abo*12/365/24*100+ \
+                                                self.Tr_r_Pw*self.pic_elec_demand/365/24*100+ \
+                                                self.Tr_N_HC+ \
+                                                self.Tr_N_Pw*self.pic_elec_demand/365/24*100+ \
+                                                self.Taxes)/100
+                self.demand_elec_tot.loc[(self.demand_elec_tot.index.hour>self.HP_start) & 
+                                         (self.demand_elec_tot.index.hour<self.HP_end),'cost']= \
+                                                       (self.En_HP+ \
+                                                        self.Tr_r_HP+ \
+                                                        self.Tr_r_abo*12/365/24*100+ \
+                                                        self.Tr_r_Pw*self.pic_elec_demand/365/24*100+ \
+                                                        self.Tr_N_HP+ \
+                                                        self.Tr_N_Pw*self.pic_elec_demand/365/24*100+ \
+                                                        self.Taxes)/100
+        elif profile_elec=="Spot":
+            # if elec profile is based on spot price then the transport componenet of the
+            #electricity price is based on MT fares, L or H depending on the DUP
+            if self.demand_elec_tot['elecCons'].sum()/self.pic_elec_demand<3000:
+                self.profile='Pro_MT_L_Winter'
+            else:
+                self.profile='Pro_MT_H_Winter'
+            self.load_table_values() 
+            self.spot = pd.read_csv(r'..\excels\clustering\electricity_spot.csv', sep=";")
+            self.spot.index=self.year_index
+            self.spot.drop(columns='timestamp')
+            
+            # self.demand_elec_tot['cost']=self.spot.cost.values
+            self.demand_elec_tot['cost']=(self.Tr_r_HC+ \
+                                                   self.Tr_r_abo*12/365/24*100+ \
+                                            self.Tr_r_Pw*self.pic_elec_demand/365/24*100+ \
+                                            self.Tr_N_HC+ \
+                                            self.Tr_N_Pw*self.pic_elec_demand/365/24*100+ \
+                                            self.Taxes)/100
+            self.demand_elec_tot.loc[(self.demand_elec_tot.index.hour>self.HP_start) &
+                                     (self.demand_elec_tot.index.hour<self.HP_end),'cost']= \
+                                                    (self.Tr_r_HP+ \
+                                                    self.Tr_r_abo*12/365/24*100+ \
+                                                    self.Tr_r_Pw*self.pic_elec_demand/365/24*100+ \
+                                                    self.Tr_N_HP+ \
+                                                    self.Tr_N_Pw*self.pic_elec_demand/365/24*100+ \
+                                                    self.Taxes)/100
+            self.profile=self.profile.split(sep='_W')[0]+"_SUMMER"
+            self.load_table_values()
+            self.demand_elec_tot.loc[ self.summer_start: self.summer_end,
+                                 'cost']=(self.Tr_r_HC+ \
+                                            self.Tr_r_abo*12/365/24*100+ \
+                                            self.Tr_r_Pw*self.pic_elec_demand/365/24*100+ \
+                                            self.Tr_N_HC+ \
+                                            self.Tr_N_Pw*self.pic_elec_demand/365/24*100+ \
+                                            self.Taxes)/100
+            self.demand_elec_tot.loc[(self.demand_elec_tot.index.hour>self.HP_start) & 
+                                     (self.demand_elec_tot.index.hour<self.HP_end),'cost']= \
+                                                   (self.Tr_r_HP+ \
+                                                    self.Tr_r_abo*12/365/24*100+ \
+                                                    self.Tr_r_Pw*self.pic_elec_demand/365/24*100+ \
+                                                    self.Tr_N_HP+ \
+                                                    self.Tr_N_Pw*self.pic_elec_demand/365/24*100+ \
+                                                    self.Taxes)/100
+            self.demand_elec_tot.cost=self.demand_elec_tot['cost']+self.spot.cost.values
+        try:
+            self.demand_elec_tot.cost.to_csv(self.df_cmSRC.loc[self.df_cmSRC.label=='electricityResource','variable costs'].values[0],sep=";")    
+        except:
+            self.demand_elec_tot.cost.to_csv(r'..\excels\clustering\electricity_cost.csv',sep=';')
+            # self.demand_elec_tot['elecPrice'].loc[]
+                
+        return None
+        
     def get_scenario(self, source):
         """
         Method to access the source file and locate data concerning the solar simulations
@@ -141,6 +283,15 @@ class weather:
         worksheet = workbook.sheet_by_name('solar_technology')
         tecno_df_columns = worksheet.row_values(0, start_colx=0, end_colx=None)
 
+        worksheet = workbook.sheet_by_name('commodity_sources')
+        cmSRC_df_columns = worksheet.row_values(
+            0, start_colx=0, end_colx=None)
+        self.df_cmSRC = pd.DataFrame(columns=cmSRC_df_columns)
+        i = 0
+        for i in range(len(cmSRC_df_columns)):
+            self.df_cmSRC[cmSRC_df_columns[i]] = worksheet.col_values(
+                i, start_rowx=1, end_rowx=None)
+        
         worksheet = workbook.sheet_by_name('transformers')
         transf_df_columns = worksheet.row_values(
             0, start_colx=0, end_colx=None)
@@ -264,8 +415,8 @@ class weather:
             tot_demand = self.load_bld_demand(bld)
             heat_demand = tot_demand.loc[
                 :, 'spaceHeatingDemand']+tot_demand.loc[:, 'domesticHotWaterDemand']
-            COP_HP=float(self.df_transf.loc[(self.df_transf.building==bld) & (self.df_transf.label=='HP'),'efficiency'].values[0])
-            COP_GWHP=float(self.df_transf.loc[(self.df_transf.building==bld) & (self.df_transf.label=='GWHP'),'efficiency'].values[0])
+            self.COP_HP=float(self.df_transf.loc[(self.df_transf.building==bld) & (self.df_transf.label=='HP'),'efficiency'].values[0])
+            self.COP_GWHP=float(self.df_transf.loc[(self.df_transf.building==bld) & (self.df_transf.label=='GWHP'),'efficiency'].values[0])
             # if self.df_transf.loc[(self.df_transf['building']==bld) & (self.df_transf['label']=='HP'),'active'].any()==1:
             #     elec_demand = tot_demand.loc[:, 'electricityDemand']+ heat_demand / COP_HP
             # elif self.df_transf.loc[(self.df_transf['building']==bld) & (self.df_transf['label']=='GWHP'),'active'].any()==1:
@@ -327,8 +478,8 @@ class weather:
                                         irradiance=[
                                         self.irr_TMY.ghi, self.irr_TMY.dhi, self.irr_TMY.dni, self.irr_TMY.temp_air],
                                         tecno_df=self.df_tecno,
-                                        COP_HP=COP_HP,
-                                        COP_GWHP=COP_GWHP)
+                                        COP_HP=self.COP_HP,
+                                        COP_GWHP=self.COP_GWHP)
                                     # print('end')
                                     if opt == 'tilt':
                                         self.opt_tilt = roof_short_opt.roof.tilt[0]
@@ -439,8 +590,8 @@ class weather:
                                                                 self.irr_TMY.dni, 
                                                                 self.irr_TMY.temp_air],
                                                     tecno_df=self.df_tecno,
-                                                    COP_HP=COP_HP,
-                                                    COP_GWHP=COP_GWHP)
+                                                    COP_HP=self.COP_HP,
+                                                    COP_GWHP=self.COP_GWHP)
                                 # print('end')
                                 """RIPRENDI DA QUI DOPO CALPINAGE
                                 """
