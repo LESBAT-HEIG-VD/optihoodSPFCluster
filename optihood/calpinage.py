@@ -24,7 +24,7 @@ class Calpinage_light:
     """
     def __init__(self,orientation=180,lat=42.6,long=6,tilt=20, 
                  W=10,L=10,d_W=0.5,d_L=0.5,
-                 tilt_EW=20,f_EW=False,f_flat_roof=True,f_plot=False,d_rows=0.6,
+                 tilt_EW=20,f_EW=False,f_plot=False,d_rows=0.6,
                  parallel="long",
                  optimal="tilt",
                  opt_tilt=0,
@@ -66,7 +66,6 @@ class Calpinage_light:
         self.W_S_A=np.abs(self.lat+self.W_S_D)
         
         self.f_EW=f_EW
-        self.flat_roof=f_flat_roof
         self.f_plot=f_plot
         self.tecno=tecno
         self.ghi=irradiance[0]
@@ -110,8 +109,7 @@ class Calpinage_light:
             self.PVT_Tin=float(tecno_df.loc[tecno_df.label=='pvt',
                                     'temp_collector_inlet'])
             self.PVT_DT=float(tecno_df.loc[tecno_df.label=='pvt',
-                                    'delta_temp_n'].values[0]. \
-                              split(',')[0])
+                                    'delta_temp_n'])
             self.l=float(tecno_df.loc[tecno_df.label=='pvt','length'])
             self.w=float(tecno_df.loc[tecno_df.label=='pvt','width'])
         
@@ -126,7 +124,7 @@ class Calpinage_light:
         if self.f_EW==False:
             POA_irradiance = pvlib.irradiance.get_total_irradiance(
                                     surface_tilt=self.roof.loc[0,'tilt'],
-                                    surface_azimuth=180+self.roof.loc[0,'cll_azimut'],#self.conv_orient+self.teta,                               
+                                    surface_azimuth=self.roof.loc[0,'cll_azimut'],#self.conv_orient+self.teta,                               
                                     ghi=self.ghi,
                                     dhi=self.dhi,
                                     dni=self.dni,
@@ -136,7 +134,7 @@ class Calpinage_light:
         elif self.f_EW==True:
             POA_irradiance1 = pvlib.irradiance.get_total_irradiance(
                                     surface_tilt=self.roof.loc[0,'tilt'],
-                                    surface_azimuth=180+self.roof.loc[0,'cll_azimut']+90,#self.conv_orient+self.teta,                               
+                                    surface_azimuth=self.roof.loc[0,'cll_azimut']+90,#self.conv_orient+self.teta,                               
                                     ghi=self.ghi,
                                     dhi=self.dhi,
                                     dni=self.dni,
@@ -144,7 +142,7 @@ class Calpinage_light:
                                     solar_azimuth=solar_position['azimuth'])
             POA_irradiance2 = pvlib.irradiance.get_total_irradiance(
                                     surface_tilt=self.roof.loc[0,'tilt'],
-                                    surface_azimuth=180+self.roof.loc[0,'cll_azimut']-90,#self.conv_orient+self.teta,                               
+                                    surface_azimuth=self.roof.loc[0,'cll_azimut']-90,#self.conv_orient+self.teta,                               
                                     ghi=self.ghi,
                                     dhi=self.dhi,
                                     dni=self.dni,
@@ -242,22 +240,16 @@ class Calpinage_light:
         
         """        
         self.roof=pd.DataFrame(columns=['N_panel','ratio','tilt','cll_azimut','row_dist'])
-        if self.flat_roof==True:
-            if self.orientation < 90 or self.orientation > 270:
-                    self.orientation = self.orientation + 180
-                    if self.orientation > 360 :
-                        self.orientation=self.orientation-360
-            
+        if self.orientation < 90 or self.orientation > 270:
+                self.orientation = self.orientation + 180
+                if self.orientation > 360 :
+                    self.orientation=self.orientation-360
         
-        """
-        Building orientation is given with convention East 90°, Sud 180°, west 270°
-        Conventional building orientation is -90°Est, 0°South, 90°West, 
-        Flat roof orientation is the direction of the short sides
-        Slanted roof orientation is the direction of the roof ridge beam
-        """
         
+        
+        #Conventional building orientation is 0°South, 90°West, -90°Est
         self.conv_orient=self.orientation-self.azimut
-        #if layout is on structure North-South
+        
         if self.f_EW:
             if parallel=="short":
                 self.teta=0
@@ -269,26 +261,16 @@ class Calpinage_light:
             else:
                 self.teta=-self.conv_orient
         else:
-            #if layout is portait on flat roof
-            if self.flat_roof==True:
-                if parallel=="short":
-                    if self.conv_orient>0:
-                        self.teta=-90
-                    else:
-                        self.teta=90
-                elif parallel=='long':
-                    self.teta=0
+            if parallel=="short":
+                if self.conv_orient>0:
+                    self.teta=-90
                 else:
-                    self.teta=-self.conv_orient
-            else:
-                # if parallel=="short":
-                #     if self.conv_orient>0:
-                #         self.teta=-90
-                #     else:
-                #         self.teta=90
-                # elif parallel=='long':
+                    self.teta=90
+            elif parallel=='long':
                 self.teta=0
-                
+            else:
+                self.teta=-self.conv_orient
+            
         
         B = box(0.0, 0.0, self.L, self.W)
         B1 = box(self.d_L, self.d_W, self.L-self.d_L, self.W-self.d_W)
@@ -323,10 +305,8 @@ class Calpinage_light:
             self.tilt=self.opt_tilt+30
         elif self.f_EW!=True and self.optimal=="tilt+35":
             self.tilt=self.opt_tilt+35
-        elif self.flat_roof==False:
-            self.tilt=self.opt_tilt
                     
-        else:       
+        else:                
             self.tilt=tilt
         
         if self.f_EW==True:
@@ -664,7 +644,7 @@ class Calpinage_light:
                 self.roof.loc[self.roof.index.size-1,'cll_azimut']=self.teta+self.conv_orient
                 self.roof.loc[self.roof.index.size-1,'row_dist']=self.off_row
             
-        elif self.flat_roof==True:
+        else:
             self.off_row=np.max([self.w*math.sin(math.radians(self.tilt))*1/np.tan(math.radians(self.W_S_A)),self.d_rows_min])
             
             if self.teta % 90 ==0:
@@ -951,120 +931,6 @@ class Calpinage_light:
                 self.roof.loc[self.roof.index.size-1,'tilt']=self.tilt
                 self.roof.loc[self.roof.index.size-1,'cll_azimut']=self.teta+self.conv_orient
                 self.roof.loc[self.roof.index.size-1,'row_dist']=self.off_row
-        else:
-            self.off_row=self.d_rows_min
-            
-            if self.teta == -90:
-                b3 = box(B1.bounds[2]-self.w*math.cos(math.radians(self.tilt)), B1.bounds[3]-self.l, 
-                         B1.bounds[2], B1.bounds[3])
-                L_south=LineString([(B1.bounds[2], B1.bounds[1]), (B1.bounds[2], B1.bounds[3])]) 
-                L_north=L_south.parallel_offset(self.w*math.cos(math.radians(self.tilt)),side='left')
-                b6= box(b3.bounds[0], b3.bounds[3], 
-                         B1.bounds[2], B1.bounds[1])
-                
-            elif self.teta == +90:
-                b3 = box(B1.bounds[0], B1.bounds[1], 
-                         B1.bounds[0]+self.w*math.cos(math.radians(self.tilt)), B1.bounds[1]+self.l)    
-                L_south=LineString([(B1.bounds[0], B1.bounds[1]), (B1.bounds[0], B1.bounds[3])]) 
-                L_north=L_south.parallel_offset(self.w*math.cos(math.radians(self.tilt)))
-                b6= box(b3.bounds[2], b3.bounds[1], 
-                         B1.bounds[0], B1.bounds[3])
-            elif self.teta == 0:
-                b3 = box(B1.bounds[0], B1.bounds[3], 
-                         B1.bounds[0]+self.l, B1.bounds[3]-self.w)    
-                L_south=LineString([(B1.bounds[0], B1.bounds[3]), (B1.bounds[2], B1.bounds[3])]) 
-                L_north=L_south.parallel_offset(self.w)
-                b6= box(b3.bounds[0], b3.bounds[1], 
-                         B1.bounds[2], B1.bounds[3])
-            
-
-                
-                
-            con_area=b3.area*self.off_pnl/self.l
-            self.rows.loc[self.rows.index.size,'edge_south']=L_south.length
-            self.rows.loc[self.rows.index.size-1,'edge_north']=L_north.length
-            self.rows.loc[self.rows.index.size-1,'row_surf']=b6.area
-            self.rows.loc[self.rows.index.size-1,'N_panel']=np.floor((b6.area+con_area)/(b3.area+con_area)) 
-            
-            if self.f_plot==True:
-                fig, ax = plt.subplots(figsize=(self.L, self.W))
-                ax.plot(*B.exterior.xy)
-                ax.plot(*B1.exterior.xy)
-                ax.plot(*b3.exterior.xy)
-                
-            if self.rows.loc[self.rows.index.size-1,'N_panel']>0:
-                if self.teta==-90:
-                    b7=affinity.translate(b3,xoff=b6.bounds[0]-b3.bounds[0],
-                                          yoff=b6.bounds[3]-b3.bounds[3])
-                elif self.teta==90:
-                    b7=affinity.translate(b3,xoff=b6.bounds[0]-b3.bounds[0],
-                                          yoff=b6.bounds[1]-b3.bounds[1])
-                elif self.teta == 0:
-                    b7=affinity.translate(b3,xoff=b6.bounds[0]-b3.bounds[0],
-                                          yoff=b6.bounds[3]-b3.bounds[3])
-                        
-                
-                b7_xy=pd.DataFrame(b7.boundary.xy).sort_values(by=0,axis=1)
-                if self.f_plot==True:
-                    ax.plot(*b7.exterior.xy)
-                
-                for z in range(1,int(self.rows.loc[self.rows.index.size-1,'N_panel'])):
-                    
-                    b8=affinity.translate(b7,xoff=z*(self.l+self.off_pnl)*math.cos(math.radians(self.teta)),
-                                      yoff=z*(self.l+self.off_pnl)*math.sin(math.radians(self.teta)))
-                    
-                    if self.f_plot==True:
-                        ax.plot(*b8.exterior.xy)
-            while L_north.intersection(B1).length>0:
-                
-                if self.teta==-90:
-                    L_south=L_south.parallel_offset(self.off_row+self.w,side='left')
-                    L_north=L_north.parallel_offset(self.off_row+self.w,side='left')
-                elif self.teta == 90:
-                    L_south=L_south.parallel_offset(self.off_row+self.w)
-                    L_north=L_north.parallel_offset(self.off_row+self.w)
-                elif self.teta == 0:
-                    L_south=L_south.parallel_offset(self.off_row+self.w)
-                    L_north=L_north.parallel_offset(self.off_row+self.w)
-                
-                if L_north.intersection(B1).length>0 :
-                    b6=box(L_north.intersection(B1).bounds[0], L_north.intersection(B1).bounds[1],
-                           L_south.intersection(B1).bounds[2], L_south.intersection(B1).bounds[3],)
-                    b3_xy=pd.DataFrame(b3.boundary.xy).sort_values(by=0,axis=1)
-                    b6_xy=pd.DataFrame(b6.boundary.xy).sort_values(by=0,axis=1)
-                    
-                    self.rows.loc[self.rows.index.size,'edge_south']=L_south.intersection(B1).length
-                    self.rows.loc[self.rows.index.size-1,'edge_north']=L_north.intersection(B1).length
-                    self.rows.loc[self.rows.index.size-1,'N_panel']=np.floor((b6.area+con_area)/(b3.area+con_area)) 
-                    self.rows.loc[self.rows.index.size-1,'row_surf']=b6.area   
-                    if self.rows.loc[self.rows.index.size-1,'N_panel']>0:
-                        if self.teta==-90:
-                            b7=affinity.translate(b3,xoff=b6.bounds[0]-b3.bounds[0],
-                                                  yoff=b6.bounds[3]-b3.bounds[3])
-                        elif self.teta==90:
-                            b7=affinity.translate(b3,xoff=b6.bounds[0]-b3.bounds[0],
-                                                  yoff=b6.bounds[1]-b3.bounds[1])
-                        elif self.teta == 0:
-                            b7=affinity.translate(b3,xoff=b6.bounds[0]-b3.bounds[0],
-                                                  yoff=b6.bounds[3]-b3.bounds[3])
-                       
-                        
-                        b7_xy=pd.DataFrame(b7.boundary.xy).sort_values(by=0,axis=1)
-                        if self.f_plot==True:
-                            ax.plot(*b7.exterior.xy)
-                        for z in range(1,int(self.rows.loc[self.rows.index.size-1,'N_panel'])):
-                            b8=affinity.translate(b7,xoff=z*(self.l+self.off_pnl)*math.cos(math.radians(self.teta)),
-                                                  yoff=(z*(self.l+self.off_pnl)*math.sin(math.radians(self.teta))))
-                            if self.f_plot==True:
-                                ax.plot(*b8.exterior.xy)
-            if self.f_plot==True:
-                plt.show()
-            self.roof.loc[self.roof.index.size,'N_panel']=self.rows.N_panel.sum()
-            self.roof.loc[self.roof.index.size-1,'ratio']=self.roof.loc[self.roof.index.size-1,'N_panel']*self.l*self.w/B1.area
-            self.roof.loc[self.roof.index.size-1,'tilt']=self.tilt
-            self.roof.loc[self.roof.index.size-1,'cll_azimut']=self.teta+self.conv_orient
-            self.roof.loc[self.roof.index.size-1,'row_dist']=self.off_row
-        
         return None
             
         

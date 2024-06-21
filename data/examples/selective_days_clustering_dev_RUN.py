@@ -15,7 +15,7 @@ import optihood.plot_functions as fnc
 
 if __name__ == '__main__':
 
-    cluster_N=[72]
+    cluster_N=[0, 12, 24, 36, 48, 60, 72]
     merge_opt=[True]
     con_opt=["Con"] #["Con","noCon"]
     clst_opt=[True]
@@ -36,11 +36,11 @@ if __name__ == '__main__':
                     """ file management"""
                     # define paths for input and result files
                     inputFilePath = r"..\excels\clustering"
-                    inputfileName = "scenario_Annual_2_costs_100%_SH35_cluster_HPOnly.xls"
+                    inputfileName = "scenario_Annual_1_costs_100%_SH35_cluster_varCost.xls"
                     # inputfileName = "scenario.xls"
                     
                     resultFilePath =r"..\results"
-                    resultFileName ="results_FOGA_Cluster_"+str(clN)+"_Group_Roof_Merged.xlsx"
+                    resultFileName ="results_1bat_validation_Cluster_"+str(clN)+"_Group_Roof_Merged.xlsx"
                     
                     #create weather file based on coordinates and PVGIS or supplying file to read
                     addr_source=os.path.join(inputFilePath, inputfileName)
@@ -48,7 +48,7 @@ if __name__ == '__main__':
                     """ initialize parameters"""
                     # set a time period for the optimization problem according to the size of clusers
                     timePeriod = pd.date_range("2021-01-01 00:00:00", "2021-12-31 23:00:00", freq="60min")
-                    numberOfBuildings = 2
+                    numberOfBuildings = 1
                     optimizationType = "costs"  # set as "env" for environmental optimization
                     mergeLinkBuses_bool=mm  
                     constraints_opt=["roof area"]
@@ -69,10 +69,8 @@ if __name__ == '__main__':
                                      load_file=False,
                                      set_scenario=True,
                                      single_scenario=False)
-                    # create electricity profile based on Romande Energie tarif
-                    # or spot profile in electricity_spot.csv
-                    # options are : "Tarif" or "Spot"
-                    meteo_data.elec(profile_elec="Tarif")
+                    
+                    
                     """declare custom cluster vector & code Book here to bypass 
                     cluster computation by weather class"""
                     # {"2021-07-30": 26,
@@ -103,9 +101,7 @@ if __name__ == '__main__':
                     network = EnergyNetwork(timePeriod,cluster)
                     network.setFromExcel(os.path.join(inputFilePath, inputfileName), 
                                          numberOfBuildings, clusterSize=cluster, 
-                                         opt=optimizationType,dispatchMode=False,
-                                         mergeLinkBuses=mergeLinkBuses_bool,
-                                         mergeHeatSourceSink=False)
+                                         opt=optimizationType,dispatchMode=False,mergeLinkBuses=mergeLinkBuses_bool)
                     
                     optimizationOptions = {
                         "gurobi": {

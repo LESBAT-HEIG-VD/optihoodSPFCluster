@@ -6,7 +6,6 @@ from bokeh.plotting import figure, show
 from bokeh.layouts import layout, gridplot
 from bokeh.models import DatetimeTickFormatter, HoverTool, Legend
 from bokeh.palettes import *
-
 from bokeh.io import output_file
 
 from openpyxl import load_workbook
@@ -39,12 +38,12 @@ def monthlyBalance(data, bus, new_legends):
     neg_flow = []
     pos_flow = []
     for i in data.columns:
-        if i.replace(building, "") in new_legends:
-            a = [i.strip("()").split(", ")]
-            if "Bus" in a[0][0]:
-                neg_flow.append(i)
-            else:
-                pos_flow.append(i)
+        a = [i.strip("()").split(", ")]
+        if "Bus" in a[0][0]:
+            neg_flow.append(i)
+        else:
+            pos_flow.append(i)
+    plt.figure()
     mark = []
     for i in neg_flow:
         plt.bar(monthShortNames, -data_month[i], label=new_legends[i.replace(building, "")], bottom=sum(mark))
@@ -69,7 +68,6 @@ def monthlyBalance(data, bus, new_legends):
     else:
         plt.title("Monthly domestic hot water balance for " + building.replace("__", ""))
     plt.show()
-
 
 
 def hourlyDailyPlot(data, bus, palette, new_legends):
@@ -960,6 +958,7 @@ def createPlot(resultFilePath, basePath, numberOfBuildings, plotLevel, plotType,
         raise ValueError("Illegal value for the parameter flow type")
 
     months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+
     if plotType == "energy balance":
         if plotLevel == "allMonths":
             for i in names:
@@ -1065,9 +1064,7 @@ def plot(excelFileName, figureFilePath, numberOfBuildings, plotLevel, plotType, 
     if plotlabels == 'default':
         newLegends = {
             "(('naturalGasResource', 'naturalGasBus'), 'flow')": "NaturalGas",
-            "(('qSource', 'heatSourceBus'), 'flow')": "qSource",
             "(('electricityBus', 'excesselectricityBus'), 'flow')": "Feed-in",
-            "(('electricityProdBus', 'excesselectricityProdBus'), 'flow')": "Feed-in",
             "(('electricityProdBus', 'electricalStorage'), 'flow')": "Battery_in",
             "(('electricityInBus', 'electricityDemand'), 'flow')": "Demand_elec",
             "(('electricityInBus', 'emobilityDemand'), 'flow')": "Demand_mobility",
@@ -1114,7 +1111,6 @@ def plot(excelFileName, figureFilePath, numberOfBuildings, plotLevel, plotType, 
             "(('GWHP60', 'dhwStorageBus'), 'flow')": "GWHP60_dhw",
             "(('GWHP35', 'shSourceBus'), 'flow')": "GWHP35_sh",
         }
-
         newLegends["(('electricityBus', 'electricityLink'), 'flow')"] = "electricityLink_out"
         newLegends["(('electricityLink', 'electricityInBus'), 'flow')"] = "electricityLink_in"
         newLegends["(('spaceHeatingBus', 'shLink'), 'flow')"] = "shLink_out"
@@ -1124,7 +1120,6 @@ def plot(excelFileName, figureFilePath, numberOfBuildings, plotLevel, plotType, 
     else:
         newLegends = {
             "(('naturalGasResource', 'naturalGasBus'), 'flow')": plotlabels["naturalGas"],
-            "(('qSource', 'heatSourceBus'), 'flow')": plotlabels["qSource"],
             "(('electricityBus', 'excesselectricityBus'), 'flow')": plotlabels["excessEl"],
             "(('electricityProdBus', 'electricalStorage'), 'flow')": plotlabels["StorageEl"]+"_in",
             "(('electricityInBus', 'electricityDemand'), 'flow')": plotlabels["DemandEl"],
@@ -1195,4 +1190,3 @@ if __name__ == '__main__':
     plotAnnualHorizontalBar = False  # determines whether the annual horizontal bar is plot or not
 
     plot(os.path.join(r"..\data\Results", f"results{numberOfBuildings}_{plotOptim}_{optMode}.xlsx"), r"..\data\Figures", plotLevel, plotType, flowType, plotAnnualHorizontalBar)
-
