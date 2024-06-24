@@ -61,7 +61,7 @@ def connectInvestmentRule(om):
     return om
 
 
-def environmentalImpactlimit(om, keyword1, keyword2, limit=None):
+def environmentalImpactlimit(om, keyword1, keyword2, limit=None,clusterSZ={}):
     """
     Based on: oemof.solph.constraints.emission_limit
     Function to limit the environmental impacts during the multi-objective optimization
@@ -77,11 +77,15 @@ def environmentalImpactlimit(om, keyword1, keyword2, limit=None):
     for (i, o) in om.flows:
         if hasattr(om.flows[i, o], keyword1):
             flows[(i, o)] = om.flows[i, o]
-            print(i)
-            print('-')
-            print(o)
+            # print(i)
+            # print(getattr(flows[i, o], keyword1))
+            # print('-')
+            # print(o)
         if hasattr(om.flows[i, o].investment, keyword2):
             transformerFlowCapacityDict[(i, o)] = om.flows[i, o].investment
+            # print(i)
+            # print('-')
+            # print(om.flows[i, o].investment)
 
     if hasattr(om, 'GenericInvestmentStorageBlock'):
         for x in om.GenericInvestmentStorageBlock.INVESTSTORAGES:
@@ -89,6 +93,16 @@ def environmentalImpactlimit(om, keyword1, keyword2, limit=None):
                 storageCapacityDict[x] = om.GenericInvestmentStorageBlock.invest[x]
 
     envImpact = "totalEnvironmentalImpact"
+    cluster_vector=[]
+    if clusterSZ!={}:        
+        for d in clusterSZ:
+            for i in range(24):
+                cluster_vector.append({}) 
+                cluster_vector[-1]=clusterSZ[d]
+    else:
+        for t in om.TIMESTEPS:
+            cluster_vector.append({}) 
+            cluster_vector[-1]=1
 
     setattr(
         om,
@@ -99,6 +113,7 @@ def environmentalImpactlimit(om, keyword1, keyword2, limit=None):
                 om.flow[inflow, outflow, t]
                 * om.timeincrement[t]
                 * sequence(getattr(flows[inflow, outflow], keyword1))[t]
+                * cluster_vector[t]
                 for (inflow, outflow) in flows
                 for t in om.TIMESTEPS
             )
@@ -142,7 +157,7 @@ def roof_area_limit(model, keyword1, keyword2, nb):
         limit = 0
         invest_flows = {}
         for (i, o) in model.flows:
-            if str(b) in str(i):
+            if 'Building'+str(b) in str(i):
                 if hasattr(model.flows[i, o].investment, keyword1):
                     invest_flows[(i, o)] = model.flows[i, o].investment
                     limit = getattr(model.flows[i, o].investment, keyword2)

@@ -115,30 +115,30 @@ class PVT(solph.Transformer):
         if layout=='east-west':
             pvdata = self.computePvSolarPosition(irradiance_diffuse, irradiance_global, latitude, longitude, collector_azimuth,
                                                collector_tilt, temp_amb,layout)
-            pv_electricity = np.minimum(self.pvtElPrecalc(temp_amb, temp_collector_inlet, pvdata['pv_ira'] / 1000, float(delta_temp_n[1])), capacityMax + base)
+            pv_electricity = np.minimum(self.pvtElPrecalc(temp_amb, temp_collector_inlet, pvdata['pv_ira'] / 1000, float(delta_temp_n)), capacityMax + base)
             pvtCollectorData_sh1 = self.pvtThPrecalc(latitude, longitude, collector_tilt, collector_azimuth+90, eta_0, a_1, a_2,
-                                                    temp_collector_inlet, float(delta_temp_n[0]),
+                                                    temp_collector_inlet, float(delta_temp_n),
                                            irradiance_global, irradiance_diffuse, temp_amb,  pv_efficiency, taualpha)
             pvtCollectorData_dhw1 = self.pvtThPrecalc(latitude, longitude, collector_tilt, collector_azimuth+90, eta_0, a_1, a_2,
-                                                 temp_collector_inlet, float(delta_temp_n[1]),
+                                                 temp_collector_inlet, float(delta_temp_n),
                                                  irradiance_global, irradiance_diffuse, temp_amb, pv_efficiency, taualpha)
             pvtCollectorData_sh2 = self.pvtThPrecalc(latitude, longitude, collector_tilt, collector_azimuth-90, eta_0, a_1, a_2,
-                                                    temp_collector_inlet, float(delta_temp_n[0]),
+                                                    temp_collector_inlet, float(delta_temp_n),
                                            irradiance_global, irradiance_diffuse, temp_amb,  pv_efficiency, taualpha)
             pvtCollectorData_dhw2 = self.pvtThPrecalc(latitude, longitude, collector_tilt, collector_azimuth-90, eta_0, a_1, a_2,
-                                                 temp_collector_inlet, float(delta_temp_n[1]),
+                                                 temp_collector_inlet, float(delta_temp_n),
                                                  irradiance_global, irradiance_diffuse, temp_amb, pv_efficiency, taualpha)
-            pvtCollectorData_sh =  (pvtCollectorData_sh1['collectors_heat']+pvtCollectorData_sh2['collectors_heat'])/1000/2
-            pvtCollectorData_dhw  = (pvtCollectorData_dhw1['collectors_heat']+pvtCollectorData_dhw2['collectors_heat'])/1000/2
+            pvtCollectorData_sh =  (pvtCollectorData_sh1+pvtCollectorData_sh2)/2
+            pvtCollectorData_dhw  = (pvtCollectorData_dhw1+pvtCollectorData_dhw2)/2
         else:
             pvdata = self.computePvSolarPosition(irradiance_diffuse, irradiance_global, latitude, longitude, collector_azimuth,
                                                collector_tilt, temp_amb,layout)
-            pv_electricity = np.minimum(self.pvtElPrecalc(temp_amb, temp_collector_inlet, pvdata['pv_ira'] / 1000, float(delta_temp_n[1])), capacityMax + base)
+            pv_electricity = np.minimum(self.pvtElPrecalc(temp_amb, temp_collector_inlet, pvdata['pv_ira'] / 1000, float(delta_temp_n)), capacityMax + base)
             pvtCollectorData_sh = self.pvtThPrecalc(latitude, longitude, collector_tilt, collector_azimuth, eta_0, a_1, a_2,
-                                                    temp_collector_inlet, float(delta_temp_n[0]),
+                                                    temp_collector_inlet, float(delta_temp_n),
                                            irradiance_global, irradiance_diffuse, temp_amb,  pv_efficiency, taualpha)
             pvtCollectorData_dhw = self.pvtThPrecalc(latitude, longitude, collector_tilt, collector_azimuth, eta_0, a_1, a_2,
-                                                 temp_collector_inlet, float(delta_temp_n[1]),
+                                                 temp_collector_inlet, float(delta_temp_n),
                                                  irradiance_global, irradiance_diffuse, temp_amb, pv_efficiency, taualpha)
         self.taualpha = taualpha
 

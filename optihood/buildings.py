@@ -297,10 +297,13 @@ class Building:
         for i, cs in data.iterrows():
             if cs["active"]:
                 sourceLabel = cs["label"]+'__' + self.__buildingLabel
-                if mergeHeatSourceSink and cs["to"] in self.__heatSourceSinkBuses:
-                    outputBusLabel = cs["to"]
-                else:
-                    outputBusLabel = cs["to"] + '__' + self.__buildingLabel
+                outputBusLabel = cs["to"] + '__' + self.__buildingLabel
+                # variable costs = (if opt == "costs") : cs["variable costs"]
+                #                  (if opt == "env") and ('electricity' in cs["label"]): data_elec["impact"]
+                #                  (if opt == "env") and ('electricity' not in cs["label"]): cs["CO2 impact"]
+                # env_per_flow = (if 'electricity' in cs["label"]) : data_elec["impact"]
+                #                 (if 'electricity' not in cs["label"]) : cs["CO2 impact"]
+                # self.__envParam is assigned the value data_elec["impact"] or cs["CO2 impact"] depending on whether ('electricity' is in cs["label"]) or not
                 if opt == "costs":
                     if 'electricity' in cs["label"]:
                         varCosts = data_elcost["cost"]

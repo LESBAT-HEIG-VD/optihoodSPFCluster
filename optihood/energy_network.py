@@ -343,7 +343,7 @@ class EnergyNetworkClass(solph.EnergySystem):
             pv_counter = 0
             pvt_counter = 0
             st_counter = 0
-            for key in data["solar"]['label']:                
+            for key in data['solar'].loc[data['solar']['building']==i,:]['label']:                
                 if 'pv_' in key:
                     pv_counter+=1
                 
@@ -354,13 +354,16 @@ class EnergyNetworkClass(solph.EnergySystem):
             data_view=data['solar'].loc[data['solar']['building']==i,:]        
             for k in range(1,pv_counter+1):
                 data_pv=data_view.loc[data_view.label=='pv_' + str(k),:]
-                b.addPV(data_pv, data["weather_data"], opt, self._dispatchMode)            
+                if not data_pv.empty:
+                    b.addPV(data_pv, data["weather_data"], opt, self._dispatchMode)            
             for k in range(1,pvt_counter+1):
                 data_pvt=data_view.loc[data_view.label=='pvt_' + str(k),:]
-                b.addPVT(data_pvt, data["weather_data"], opt, mergeLinkBuses, self._dispatchMode)
+                if not data_pvt.empty:
+                    b.addPVT(data_pvt, data["weather_data"], opt, mergeLinkBuses, self._dispatchMode)
             for k in range(1,st_counter+1):
                 data_st=data_view.loc[data_view.label=='solarCollector_' + str(k),:]
-                b.addSolar(data_st, data["weather_data"], opt, mergeLinkBuses, self._dispatchMode)                
+                if not data_st.empty:
+                    b.addSolar(data_st, data["weather_data"], opt, mergeLinkBuses, self._dispatchMode)                
             
   
             
@@ -402,7 +405,7 @@ class EnergyNetworkClass(solph.EnergySystem):
 
         # add constraint to limit the environmental impacts
         self._optimizationModel, flows, transformerFlowCapacityDict, storageCapacityDict = environmentalImpactlimit(
-            self._optimizationModel, keyword1="env_per_flow", keyword2="env_per_capa", limit=envImpactlimit)
+            self._optimizationModel, keyword1="env_per_flow", keyword2="env_per_capa", limit=envImpactlimit,clusterSZ=clusterSize)
                 
         # optional constraints (available: 'roof area')
         if optConstraints:
